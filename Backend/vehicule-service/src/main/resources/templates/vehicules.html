@@ -2,125 +2,306 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="content">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="section-header">
         <h2><i class="bi bi-car-front"></i> Véhicules</h2>
         <a th:href="@{/backoffice/vehicules/new}" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Nouveau véhicule
+            <i class="bi bi-plus-lg me-1"></i> Nouveau véhicule
         </a>
     </div>
 
+    <!-- Alerts -->
     <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
-        <span th:text="${success}"></span>
+        <i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <span th:text="${error}"></span>
+        <i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
     <!-- Filter bar -->
-    <div class="card stat-card mb-3">
-        <div class="card-body">
-            <form th:action="@{/backoffice/vehicules}" method="get" class="row g-2 align-items-end">
+    <div class="stat-card mb-4">
+        <div class="p-3">
+            <div class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label small">Statut</label>
-                    <select name="statut" class="form-select">
-                        <option value="">Tous</option>
-                        <option value="DISPONIBLE" th:selected="${filterStatut == 'DISPONIBLE'}">Disponible</option>
-                        <option value="LOUE" th:selected="${filterStatut == 'LOUE'}">Loué</option>
-                        <option value="EN_MAINTENANCE" th:selected="${filterStatut == 'EN_MAINTENANCE'}">En maintenance</option>
-                        <option value="HORS_SERVICE" th:selected="${filterStatut == 'HORS_SERVICE'}">Hors service</option>
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="vSearch" class="form-control"
+                               placeholder="Marque, modèle, plaque..." oninput="filterVehicules()">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select id="vStatut" class="form-select" onchange="filterVehicules()">
+                        <option value="">Tous statuts</option>
+                        <option value="DISPONIBLE">Disponible</option>
+                        <option value="LOUE">Loué</option>
+                        <option value="EN_MAINTENANCE">En maintenance</option>
+                        <option value="HORS_SERVICE">Hors service</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="vCategorie" class="form-select" onchange="filterVehicules()">
+                        <option value="">Toutes catégories</option>
+                        <option th:each="c : ${allCategories}" th:value="${c.nom()}" th:text="${c.nom()}"></option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="vSort" class="form-select" onchange="filterVehicules()">
+                        <option value="id-desc">Récents d'abord</option>
+                        <option value="id-asc">Anciens d'abord</option>
+                        <option value="marque-asc">Marque A-Z</option>
+                        <option value="marque-desc">Marque Z-A</option>
+                        <option value="annee-desc">Année ↓</option>
+                        <option value="annee-asc">Année ↑</option>
+                        <option value="km-asc">Km ↑</option>
+                        <option value="km-desc">Km ↓</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small">Catégorie</label>
-                    <select name="categorie" class="form-select">
-                        <option value="">Toutes</option>
-                        <option th:each="c : ${allCategories}" th:value="${c.idCategorie()}"
-                                th:text="${c.nom()}" th:selected="${filterCategorie == c.idCategorie()}"></option>
-                    </select>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" id="vKmMin" class="form-control" placeholder="Km min"
+                                   min="0" oninput="filterVehicules()">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" id="vKmMax" class="form-control" placeholder="Km max"
+                                   min="0" oninput="filterVehicules()">
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small">Marque</label>
-                    <input type="text" name="marque" class="form-control" th:value="${filterMarque}" placeholder="Ex: Renault">
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-funnel"></i> Filtrer</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    <!-- Vehicle cards with image carousel -->
-    <div class="row">
-        <div th:each="v, iterStat : ${vehicules}" class="col-md-4 mb-4">
-            <div class="card stat-card h-100">
+    <!-- Page info -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="page-info" id="vPageInfo"></span>
+    </div>
+
+    <!-- Vehicle cards -->
+    <div class="row g-3" id="vCardsContainer">
+        <div th:each="v, iterStat : ${vehicules}" class="col-lg-4 col-md-6 v-card-item fade-item"
+             th:data-id="${v.idVehicule()}" th:data-marque="${v.marque()}"
+             th:data-modele="${v.modele()}" th:data-immat="${v.immatriculation()}"
+             th:data-statut="${v.statut()}" th:data-categorie="${v.categorie()?.nom()}"
+             th:data-annee="${v.annee()}" th:data-km="${v.kilometrage()}"
+             th:data-images="${#strings.listJoin(v.images(), '|||')}">
+            <div class="dark-card h-100">
                 <!-- Image Carousel -->
-                <div th:if="${!v.images().isEmpty()}" th:id="'carousel-' + ${iterStat.index}" class="carousel slide" data-bs-ride="false">
+                <div th:if="${!v.images().isEmpty()}" th:id="'carousel-' + ${iterStat.index}"
+                     class="carousel slide v-carousel" data-bs-ride="false">
                     <div class="carousel-inner">
-                        <div th:each="img, imgStat : ${v.images()}" class="carousel-item" th:classappend="${imgStat.first} ? 'active'">
-                            <img th:src="${img}" class="d-block w-100" style="height:200px; object-fit:cover; border-radius:12px 12px 0 0;" alt="Vehicle">
+                        <div th:each="img, imgStat : ${v.images()}" class="carousel-item"
+                             th:classappend="${imgStat.first} ? 'active'">
+                            <img th:src="${img}" class="vehicle-img" alt="Vehicle">
                         </div>
                     </div>
                     <!-- Indicators -->
-                    <div class="carousel-indicators" th:if="${v.images().size() > 1}">
+                    <div class="carousel-indicators" th:if="${v.images().size() > 1}" style="margin-bottom:6px;">
                         <button th:each="img, imgStat : ${v.images()}" type="button"
-                                th:attr="data-bs-target='#carousel-' + ${iterStat.index}, data-bs-slide-to=${imgStat.index}"
-                                th:classappend="${imgStat.first} ? 'active'"
-                                style="width:8px; height:8px; border-radius:50%;"></button>
+                                th:attr="data-bs-target='#carousel-' + ${iterStat.index}"
+                                th:data-bs-slide-to="${imgStat.index}"
+                                th:classappend="${imgStat.first} ? 'active'"></button>
+                    </div>
+                    <!-- Image count badge -->
+                    <div th:if="${v.images().size() > 1}" style="position:absolute; top:10px; right:10px;">
+                        <span class="badge" style="background:rgba(0,0,0,0.6); color:#fff; font-size:0.7rem;">
+                            <i class="bi bi-images me-1"></i><span th:text="${v.images().size()}"></span>
+                        </span>
                     </div>
                 </div>
-                <div th:if="${v.images().isEmpty()}" class="bg-light d-flex align-items-center justify-content-center" style="height:200px; border-radius:12px 12px 0 0;">
-                    <i class="bi bi-car-front" style="font-size:3rem; color:#ccc;"></i>
+                <!-- No image placeholder -->
+                <div th:if="${v.images().isEmpty()}" class="vehicle-img-placeholder">
+                    <i class="bi bi-car-front"></i>
                 </div>
 
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <h6 class="card-title mb-1" th:text="${v.marque() + ' ' + v.modele()}"></h6>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 style="font-weight:700; margin:0;" th:text="${v.marque() + ' ' + v.modele()}"></h6>
                         <span class="badge"
                               th:classappend="${v.statut() == 'DISPONIBLE'} ? 'badge-disponible' :
                               (${v.statut() == 'LOUE'} ? 'badge-loue' :
                               (${v.statut() == 'EN_MAINTENANCE'} ? 'badge-maintenance' : 'badge-hors-service'))"
                               th:text="${v.statut()}"></span>
                     </div>
-                    <p class="text-muted small mb-2">
-                        <code th:text="${v.immatriculation()}"></code> &middot;
-                        <span th:text="${v.annee()}"></span> &middot;
-                        <span th:text="${v.kilometrage() + ' km'}"></span>
-                    </p>
-                    <p class="small mb-2">
-                        <i class="bi bi-tag"></i> <span th:text="${v.categorie()?.nom()}"></span>
-                    </p>
-                    <div class="d-flex gap-1">
-                        <a th:href="@{/backoffice/vehicules/edit/{id}(id=${v.idVehicule()})}"
-                           class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Modifier</a>
-                        <form th:action="@{/backoffice/vehicules/delete/{id}(id=${v.idVehicule()})}"
-                              method="post" style="display:inline"
-                              onsubmit="return confirm('Supprimer ce véhicule ?')">
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
+
+                    <div class="mb-2" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <code style="color:var(--accent); background:var(--accent-soft); padding:2px 8px; border-radius:4px; font-size:0.8rem;"
+                              th:text="${v.immatriculation()}"></code>
+                        <span style="color:var(--text-muted); font-size:0.8rem;">
+                            <i class="bi bi-calendar3 me-1"></i><span th:text="${v.annee()}"></span>
+                        </span>
+                        <span style="color:var(--text-muted); font-size:0.8rem;">
+                            <i class="bi bi-speedometer me-1"></i><span th:text="${v.kilometrage() + ' km'}"></span>
+                        </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span style="color:var(--text-secondary); font-size:0.8rem;">
+                            <i class="bi bi-tag me-1"></i><span th:text="${v.categorie()?.nom()}"></span>
+                        </span>
+                        <div class="d-flex gap-1">
+                            <a th:href="@{/backoffice/vehicules/edit/{id}(id=${v.idVehicule()})}"
+                               class="btn btn-ghost" title="Modifier"><i class="bi bi-pencil"></i></a>
+                            <form th:action="@{/backoffice/vehicules/delete/{id}(id=${v.idVehicule()})}"
+                                  method="post" style="display:inline"
+                                  onsubmit="return confirm('Supprimer ce véhicule ?')">
+                                <button type="submit" class="btn btn-ghost" style="color:var(--danger);" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div th:if="${#lists.isEmpty(vehicules)}" class="col-12">
-            <div class="card stat-card"><div class="card-body text-center text-muted">Aucun véhicule trouvé</div></div>
-        </div>
     </div>
 
-    <!-- Auto-slide on hover -->
+    <!-- Empty state -->
+    <div id="vEmptyState" class="stat-card p-5 text-center" style="display:none;">
+        <i class="bi bi-search" style="font-size:2.5rem; color:var(--text-muted);"></i>
+        <p style="color:var(--text-muted); margin-top:12px;">Aucun véhicule trouvé</p>
+    </div>
+
+    <!-- Pagination -->
+    <nav class="mt-4 d-flex justify-content-center">
+        <ul class="pagination" id="vPagination"></ul>
+    </nav>
+
     <script>
-        document.querySelectorAll('.carousel').forEach(el => {
-            const carousel = new bootstrap.Carousel(el, { interval: false });
-            el.addEventListener('mouseenter', () => {
-                carousel._config.interval = 1500;
-                carousel.cycle();
+        const V_PER_PAGE = 6;
+        let vCurrentPage = 1;
+
+        function filterVehicules() {
+            const search = document.getElementById('vSearch').value.toLowerCase();
+            const statut = document.getElementById('vStatut').value;
+            const categorie = document.getElementById('vCategorie').value;
+            const sort = document.getElementById('vSort').value;
+            const kmMin = parseInt(document.getElementById('vKmMin').value) || 0;
+            const kmMax = parseInt(document.getElementById('vKmMax').value) || Infinity;
+            const items = Array.from(document.querySelectorAll('.v-card-item'));
+
+            // Filter
+            items.forEach(item => {
+                const d = item.dataset;
+                let show = true;
+
+                if (search) {
+                    const haystack = [d.marque, d.modele, d.immat, d.categorie].join(' ').toLowerCase();
+                    if (!haystack.includes(search)) show = false;
+                }
+                if (statut && d.statut !== statut) show = false;
+                if (categorie && d.categorie !== categorie) show = false;
+
+                const km = parseInt(d.km) || 0;
+                if (km < kmMin) show = false;
+                if (km > kmMax) show = false;
+
+                d.visible = show ? '1' : '0';
             });
-            el.addEventListener('mouseleave', () => {
-                carousel._config.interval = false;
-                carousel.pause();
+
+            // Sort
+            const visible = items.filter(i => i.dataset.visible === '1');
+            const [field, dir] = sort.split('-');
+            visible.sort((a, b) => {
+                let va, vb;
+                if (field === 'id') { va = +a.dataset.id; vb = +b.dataset.id; }
+                else if (field === 'marque') { va = a.dataset.marque.toLowerCase(); vb = b.dataset.marque.toLowerCase(); }
+                else if (field === 'annee') { va = +(a.dataset.annee || 0); vb = +(b.dataset.annee || 0); }
+                else if (field === 'km') { va = +(a.dataset.km || 0); vb = +(b.dataset.km || 0); }
+                if (va < vb) return dir === 'asc' ? -1 : 1;
+                if (va > vb) return dir === 'asc' ? 1 : -1;
+                return 0;
             });
-        });
+
+            vCurrentPage = 1;
+            renderVPage(visible, items);
+        }
+
+        function renderVPage(visible, allItems) {
+            const total = visible.length;
+            const totalPages = Math.max(1, Math.ceil(total / V_PER_PAGE));
+            if (vCurrentPage > totalPages) vCurrentPage = totalPages;
+
+            const start = (vCurrentPage - 1) * V_PER_PAGE;
+            const end = start + V_PER_PAGE;
+
+            // Reorder DOM
+            const container = document.getElementById('vCardsContainer');
+            allItems.forEach(i => i.style.display = 'none');
+            visible.forEach((item, idx) => {
+                item.style.display = (idx >= start && idx < end) ? '' : 'none';
+                container.appendChild(item);
+            });
+
+            document.getElementById('vEmptyState').style.display = total === 0 ? '' : 'none';
+            document.getElementById('vPageInfo').textContent = total > 0
+                ? `Affichage ${start+1}-${Math.min(end, total)} sur ${total} véhicule(s)`
+                : '';
+
+            buildPagination('vPagination', totalPages, vCurrentPage, (p) => {
+                vCurrentPage = p;
+                renderVPage(visible, allItems);
+            });
+
+            // Re-init carousels for visible items
+            initCarousels();
+        }
+
+        function buildPagination(containerId, totalPages, current, onClick) {
+            const ul = document.getElementById(containerId);
+            ul.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            const prev = document.createElement('li');
+            prev.className = 'page-item' + (current <= 1 ? ' disabled' : '');
+            prev.innerHTML = '<a class="page-link" href="#">«</a>';
+            if (current > 1) prev.querySelector('a').addEventListener('click', e => { e.preventDefault(); onClick(current-1); });
+            ul.appendChild(prev);
+
+            for (let p = 1; p <= totalPages; p++) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (p === current ? ' active' : '');
+                li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+                li.querySelector('a').addEventListener('click', e => { e.preventDefault(); onClick(p); });
+                ul.appendChild(li);
+            }
+
+            const next = document.createElement('li');
+            next.className = 'page-item' + (current >= totalPages ? ' disabled' : '');
+            next.innerHTML = '<a class="page-link" href="#">»</a>';
+            if (current < totalPages) next.querySelector('a').addEventListener('click', e => { e.preventDefault(); onClick(current+1); });
+            ul.appendChild(next);
+        }
+
+        // ==================== Carousel on hover ====================
+        function initCarousels() {
+            document.querySelectorAll('.v-carousel').forEach(el => {
+                // Dispose any existing carousel instance
+                const existing = bootstrap.Carousel.getInstance(el);
+                if (existing) existing.dispose();
+
+                const carousel = new bootstrap.Carousel(el, { interval: false, ride: false, wrap: true });
+                let hoverInterval = null;
+
+                el.removeEventListener('mouseenter', el._hoverEnter);
+                el.removeEventListener('mouseleave', el._hoverLeave);
+
+                el._hoverEnter = () => {
+                    hoverInterval = setInterval(() => { carousel.next(); }, 1200);
+                };
+                el._hoverLeave = () => {
+                    clearInterval(hoverInterval);
+                    hoverInterval = null;
+                };
+
+                el.addEventListener('mouseenter', el._hoverEnter);
+                el.addEventListener('mouseleave', el._hoverLeave);
+            });
+        }
+
+        // Init
+        filterVehicules();
     </script>
 </div>
 </body>

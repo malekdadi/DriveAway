@@ -8,7 +8,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -114,28 +113,9 @@ public class BackofficeController {
     // ==================== Vehicules ====================
 
     @GetMapping("/vehicules")
-    public String listVehicules(
-            @RequestParam(required = false) String statut,
-            @RequestParam(required = false) Long categorie,
-            @RequestParam(required = false) String marque,
-            Model model) {
-
-        List<VehiculeResponse> vehicules;
-        if (statut != null && !statut.isEmpty()) {
-            vehicules = vehiculeService.findByStatut(statut);
-        } else if (categorie != null) {
-            vehicules = vehiculeService.findByCategorie(categorie);
-        } else if (marque != null && !marque.isEmpty()) {
-            vehicules = vehiculeService.searchByMarque(marque);
-        } else {
-            vehicules = vehiculeService.findAll();
-        }
-
-        model.addAttribute("vehicules", vehicules);
+    public String listVehicules(Model model) {
+        model.addAttribute("vehicules", vehiculeService.findAll());
         model.addAttribute("allCategories", categorieService.findAll());
-        model.addAttribute("filterStatut", statut);
-        model.addAttribute("filterCategorie", categorie);
-        model.addAttribute("filterMarque", marque);
         model.addAttribute("activePage", "vehicules");
         model.addAttribute("pageTitle", "Véhicules - DriveAway");
         model.addAttribute("contentTemplate", "vehicules");

@@ -2,69 +2,211 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="content">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="section-header">
         <h2><i class="bi bi-tags"></i> Catégories</h2>
         <a th:href="@{/backoffice/categories/new}" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Nouvelle catégorie
+            <i class="bi bi-plus-lg me-1"></i> Nouvelle catégorie
         </a>
     </div>
 
-    <!-- Alert messages -->
+    <!-- Alerts -->
     <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
-        <span th:text="${success}"></span>
+        <i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <span th:text="${error}"></span>
+        <i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
-    <div class="card stat-card">
-        <div class="card-body">
-            <table class="table table-hover">
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Image</th>
-                    <th>Nom</th>
-                    <th>Description</th>
-                    <th>Statut</th>
-                    <th>Véhicules</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="c : ${categories}">
-                    <td th:text="${c.idCategorie()}"></td>
-                    <td>
-                        <img th:if="${c.imageUrl() != null and !c.imageUrl().isEmpty()}"
-                             th:src="${c.imageUrl()}" alt="cat" style="width:50px; height:50px; object-fit:cover; border-radius:6px;">
-                        <span th:if="${c.imageUrl() == null or c.imageUrl().isEmpty()}" class="text-muted">—</span>
-                    </td>
-                    <td class="fw-bold" th:text="${c.nom()}"></td>
-                    <td th:text="${c.description()}"></td>
-                    <td>
-                        <span class="badge" th:classappend="${c.statut()} ? 'bg-success' : 'bg-secondary'"
-                              th:text="${c.statut()} ? 'Active' : 'Inactive'"></span>
-                    </td>
-                    <td th:text="${c.nombreVehicules()}"></td>
-                    <td>
-                        <a th:href="@{/backoffice/categories/edit/{id}(id=${c.idCategorie()})}"
-                           class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                        <form th:action="@{/backoffice/categories/delete/{id}(id=${c.idCategorie()})}"
-                              method="post" style="display:inline"
-                              onsubmit="return confirm('Supprimer cette catégorie ?')">
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(categories)}">
-                    <td colspan="7" class="text-center text-muted">Aucune catégorie</td>
-                </tr>
-                </tbody>
-            </table>
+    <!-- Search & Filter bar -->
+    <div class="stat-card mb-4">
+        <div class="p-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="catSearch" class="form-control" placeholder="Rechercher par nom ou description..."
+                               oninput="filterCategories()">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select id="catStatutFilter" class="form-select" onchange="filterCategories()">
+                        <option value="">Tous les statuts</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="catSort" class="form-select" onchange="filterCategories()">
+                        <option value="id-asc">Trier par ID ↑</option>
+                        <option value="id-desc">Trier par ID ↓</option>
+                        <option value="nom-asc">Trier par Nom A-Z</option>
+                        <option value="nom-desc">Trier par Nom Z-A</option>
+                        <option value="vehicules-desc">Plus de véhicules</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Page info -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="page-info" id="catPageInfo"></span>
+    </div>
+
+    <!-- Category cards -->
+    <div class="row g-3" id="catCardsContainer">
+        <div th:each="c : ${categories}" class="col-md-4 cat-card-item fade-item"
+             th:data-id="${c.idCategorie()}" th:data-nom="${c.nom()}" th:data-desc="${c.description()}"
+             th:data-statut="${c.statut()}" th:data-count="${c.nombreVehicules()}">
+            <div class="dark-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <!-- Category Image -->
+                        <img th:if="${c.imageUrl() != null and !c.imageUrl().isEmpty()}"
+                             th:src="${c.imageUrl()}" alt="cat" class="cat-img">
+                        <div th:if="${c.imageUrl() == null or c.imageUrl().isEmpty()}" class="cat-img d-flex align-items-center justify-content-center" style="background:var(--bg-input);">
+                            <i class="bi bi-tags" style="font-size:1.3rem; color:var(--text-muted);"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 style="font-weight:700; margin-bottom:4px;" th:text="${c.nom()}"></h6>
+                                <span class="badge" th:classappend="${c.statut()} ? 'badge-disponible' : 'badge-hors-service'"
+                                      th:text="${c.statut()} ? 'Active' : 'Inactive'"></span>
+                            </div>
+                            <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:8px; line-height:1.4;"
+                               th:text="${c.description() != null and !c.description().isEmpty()} ? ${c.description()} : 'Aucune description'"></p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span style="color:var(--text-muted); font-size:0.8rem;">
+                                    <i class="bi bi-car-front me-1"></i>
+                                    <span th:text="${c.nombreVehicules()}">0</span> véhicule(s)
+                                </span>
+                                <div class="d-flex gap-1">
+                                    <a th:href="@{/backoffice/categories/edit/{id}(id=${c.idCategorie()})}"
+                                       class="btn btn-ghost" title="Modifier">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form th:action="@{/backoffice/categories/delete/{id}(id=${c.idCategorie()})}"
+                                          method="post" style="display:inline"
+                                          onsubmit="return confirm('Supprimer cette catégorie ?')">
+                                        <button type="submit" class="btn btn-ghost" style="color:var(--danger);" title="Supprimer">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="catEmptyState" class="stat-card p-5 text-center" style="display:none;">
+        <i class="bi bi-search" style="font-size:2.5rem; color:var(--text-muted);"></i>
+        <p style="color:var(--text-muted); margin-top:12px;">Aucune catégorie trouvée</p>
+    </div>
+
+    <!-- Pagination -->
+    <nav class="mt-4 d-flex justify-content-center">
+        <ul class="pagination" id="catPagination"></ul>
+    </nav>
+
+    <script>
+        const CAT_PER_PAGE = 6;
+        let catCurrentPage = 1;
+
+        function filterCategories() {
+            const search = document.getElementById('catSearch').value.toLowerCase();
+            const statutFilter = document.getElementById('catStatutFilter').value;
+            const sort = document.getElementById('catSort').value;
+            const items = Array.from(document.querySelectorAll('.cat-card-item'));
+
+            // Filter
+            items.forEach(item => {
+                const nom = (item.dataset.nom || '').toLowerCase();
+                const desc = (item.dataset.desc || '').toLowerCase();
+                const statut = item.dataset.statut === 'true';
+                let show = true;
+
+                if (search && !nom.includes(search) && !desc.includes(search)) show = false;
+                if (statutFilter === 'active' && !statut) show = false;
+                if (statutFilter === 'inactive' && statut) show = false;
+
+                item.dataset.visible = show ? '1' : '0';
+            });
+
+            // Sort
+            const visible = items.filter(i => i.dataset.visible === '1');
+            const [field, dir] = sort.split('-');
+            visible.sort((a, b) => {
+                let va, vb;
+                if (field === 'id') { va = +a.dataset.id; vb = +b.dataset.id; }
+                else if (field === 'nom') { va = a.dataset.nom.toLowerCase(); vb = b.dataset.nom.toLowerCase(); }
+                else if (field === 'vehicules') { va = +a.dataset.count; vb = +b.dataset.count; }
+                if (va < vb) return dir === 'asc' ? -1 : 1;
+                if (va > vb) return dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            catCurrentPage = 1;
+            renderCatPage(visible, items);
+        }
+
+        function renderCatPage(visible, allItems) {
+            const total = visible.length;
+            const totalPages = Math.max(1, Math.ceil(total / CAT_PER_PAGE));
+            if (catCurrentPage > totalPages) catCurrentPage = totalPages;
+
+            const start = (catCurrentPage - 1) * CAT_PER_PAGE;
+            const end = start + CAT_PER_PAGE;
+
+            allItems.forEach(i => i.style.display = 'none');
+            visible.forEach((item, idx) => {
+                item.style.display = (idx >= start && idx < end) ? '' : 'none';
+            });
+
+            document.getElementById('catEmptyState').style.display = total === 0 ? '' : 'none';
+            document.getElementById('catPageInfo').textContent = total > 0
+                ? `Affichage ${start+1}-${Math.min(end, total)} sur ${total} catégorie(s)`
+                : '';
+            buildPagination('catPagination', totalPages, catCurrentPage, (p) => {
+                catCurrentPage = p;
+                renderCatPage(visible, allItems);
+            });
+        }
+
+        function buildPagination(containerId, totalPages, current, onClick) {
+            const ul = document.getElementById(containerId);
+            ul.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            const prev = document.createElement('li');
+            prev.className = 'page-item' + (current <= 1 ? ' disabled' : '');
+            prev.innerHTML = '<a class="page-link" href="#">«</a>';
+            if (current > 1) prev.querySelector('a').addEventListener('click', e => { e.preventDefault(); onClick(current-1); });
+            ul.appendChild(prev);
+
+            for (let p = 1; p <= totalPages; p++) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (p === current ? ' active' : '');
+                li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+                li.querySelector('a').addEventListener('click', e => { e.preventDefault(); onClick(p); });
+                ul.appendChild(li);
+            }
+
+            const next = document.createElement('li');
+            next.className = 'page-item' + (current >= totalPages ? ' disabled' : '');
+            next.innerHTML = '<a class="page-link" href="#">»</a>';
+            if (current < totalPages) next.querySelector('a').addEventListener('click', e => { e.preventDefault(); onClick(current+1); });
+            ul.appendChild(next);
+        }
+
+        // Init
+        filterCategories();
+    </script>
 </div>
 </body>
 </html>

@@ -7,52 +7,165 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f6f9; }
-        .sidebar { background: #1e293b; min-height: 100vh; }
-        .sidebar a { color: #94a3b8; text-decoration: none; padding: 12px 20px; display: block; border-radius: 8px; margin: 4px 10px; }
-        .sidebar a:hover, .sidebar a.active { color: #fff; background: #334155; }
-        .sidebar .brand { color: #fff; font-size: 1.4rem; font-weight: bold; padding: 20px; border-bottom: 1px solid #334155; margin-bottom: 10px; }
-        .stat-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .stat-card .card-body { padding: 20px; }
-        .stat-icon { font-size: 2rem; opacity: 0.7; }
-        .table th { background: #f8fafc; font-weight: 600; }
-        .badge-disponible { background: #22c55e; }
-        .badge-loue { background: #3b82f6; }
-        .badge-maintenance { background: #f59e0b; }
-        .badge-hors-service { background: #ef4444; }
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-card: #1e2231;
+            --bg-card-hover: #252a3a;
+            --bg-input: #252a3a;
+            --border-color: #2d3348;
+            --text-primary: #e4e6ef;
+            --text-secondary: #8a8fa8;
+            --text-muted: #5d6180;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-soft: rgba(99,102,241,0.15);
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        /* Sidebar */
+        .sidebar { background: var(--bg-secondary); min-height: 100vh; border-right: 1px solid var(--border-color); position: fixed; width: 230px; z-index: 100; }
+        .sidebar .brand { color: #fff; font-size: 1.3rem; font-weight: 700; padding: 22px 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; }
+        .sidebar .brand i { color: var(--accent); font-size: 1.5rem; }
+        .sidebar nav { padding: 12px 0; }
+        .sidebar nav a { color: var(--text-secondary); padding: 11px 20px; display: flex; align-items: center; gap: 10px; margin: 2px 10px; border-radius: 8px; font-size: 0.9rem; transition: all 0.2s; }
+        .sidebar nav a:hover { color: var(--text-primary); background: var(--bg-card); }
+        .sidebar nav a.active { color: #fff; background: var(--accent); font-weight: 600; }
+        .sidebar nav a.active i { color: #fff; }
+        .sidebar nav .divider { border-top: 1px solid var(--border-color); margin: 10px 20px; }
+
+        /* Main */
+        .main-content { margin-left: 230px; padding: 28px 32px; min-height: 100vh; }
+
+        /* Cards */
+        .dark-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; transition: all 0.25s; }
+        .dark-card:hover { background: var(--bg-card-hover); border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+        .dark-card .card-body { padding: 18px; }
+
+        /* Stat cards */
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; }
+        .stat-card .stat-value { font-size: 2rem; font-weight: 700; }
+        .stat-card .stat-label { color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-icon { font-size: 2.2rem; opacity: 0.6; }
+
+        /* Badges */
+        .badge-disponible { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .badge-loue { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .badge-maintenance { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .badge-hors-service { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .badge { font-weight: 500; padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; }
+
+        /* Forms */
+        .form-control, .form-select { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; padding: 10px 14px; transition: border-color 0.2s; }
+        .form-control:focus, .form-select:focus { background: var(--bg-input); color: var(--text-primary); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .form-control::placeholder { color: var(--text-muted); }
+        .form-label { color: var(--text-secondary); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+        .form-text { color: var(--text-muted); font-size: 0.8rem; }
+        .form-check-input { background-color: var(--bg-input); border-color: var(--border-color); }
+        .form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
+        .form-check-label { color: var(--text-secondary); }
+        .form-control.is-invalid, .form-select.is-invalid { border-color: var(--danger); }
+        .invalid-feedback { color: var(--danger); font-size: 0.8rem; }
+
+        /* Buttons */
+        .btn-primary { background: var(--accent); border-color: var(--accent); border-radius: 8px; font-weight: 600; padding: 8px 20px; }
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-secondary { background: var(--bg-input); border-color: var(--border-color); color: var(--text-primary); border-radius: 8px; }
+        .btn-secondary:hover { background: var(--border-color); border-color: var(--border-color); color: #fff; }
+        .btn-outline-primary { color: var(--accent); border-color: var(--accent); border-radius: 8px; }
+        .btn-outline-primary:hover { background: var(--accent); color: #fff; }
+        .btn-outline-danger { color: var(--danger); border-color: var(--danger); border-radius: 8px; }
+        .btn-outline-danger:hover { background: var(--danger); color: #fff; }
+        .btn-ghost { background: transparent; border: none; color: var(--text-secondary); padding: 6px 10px; border-radius: 6px; }
+        .btn-ghost:hover { background: var(--bg-input); color: var(--text-primary); }
+
+        /* Alerts */
+        .alert { border-radius: 10px; border: none; }
+        .alert-success { background: rgba(34,197,94,0.12); color: var(--success); }
+        .alert-danger { background: rgba(239,68,68,0.12); color: var(--danger); }
+
+        /* Pagination */
+        .pagination .page-link { background: var(--bg-card); border-color: var(--border-color); color: var(--text-secondary); border-radius: 8px; margin: 0 2px; }
+        .pagination .page-link:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .pagination .page-item.active .page-link { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .pagination .page-item.disabled .page-link { background: var(--bg-secondary); color: var(--text-muted); }
+
+        /* Search bar */
+        .search-box { position: relative; }
+        .search-box i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .search-box input { padding-left: 40px; }
+
+        /* Vehicle image */
+        .vehicle-img { width: 100%; height: 180px; object-fit: cover; border-radius: 12px 12px 0 0; }
+        .vehicle-img-placeholder { width: 100%; height: 180px; background: var(--bg-input); border-radius: 12px 12px 0 0; display: flex; align-items: center; justify-content: center; }
+        .vehicle-img-placeholder i { font-size: 3rem; color: var(--text-muted); }
+
+        /* Category image */
+        .cat-img { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 2px solid var(--border-color); }
+
+        /* Carousel */
+        .carousel-indicators button { width: 8px !important; height: 8px !important; border-radius: 50% !important; }
+
+        /* Table */
+        .dark-table { width: 100%; }
+        .dark-table th { color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); padding: 10px 14px; font-weight: 600; }
+        .dark-table td { color: var(--text-primary); padding: 12px 14px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .dark-table tr:hover td { background: var(--bg-card-hover); }
+
+        /* Section header */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .section-header h2 { font-size: 1.5rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px; }
+        .section-header h2 i { color: var(--accent); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+        /* Page info */
+        .page-info { color: var(--text-muted); font-size: 0.85rem; }
+
+        /* Transitions */
+        .fade-item { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-2 sidebar p-0">
-            <div class="brand"><i class="bi bi-car-front-fill"></i> DriveAway</div>
-            <nav>
-                <a th:href="@{/backoffice}" th:classappend="${activePage == 'dashboard'} ? 'active'">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </a>
-                <a th:href="@{/backoffice/categories}" th:classappend="${activePage == 'categories'} ? 'active'">
-                    <i class="bi bi-tags"></i> Catégories
-                </a>
-                <a th:href="@{/backoffice/vehicules}" th:classappend="${activePage == 'vehicules'} ? 'active'">
-                    <i class="bi bi-car-front"></i> Véhicules
-                </a>
-                <a th:href="@{/swagger-ui.html}" target="_blank">
-                    <i class="bi bi-filetype-json"></i> API Swagger
-                </a>
-                <a th:href="@{/h2-console}" target="_blank">
-                    <i class="bi bi-database"></i> H2 Console
-                </a>
-            </nav>
-        </div>
-
-        <!-- Main content -->
-        <div class="col-md-10 p-4">
-            <div th:replace="~{${contentTemplate} :: content}">Content goes here</div>
-        </div>
-    </div>
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="brand"><i class="bi bi-car-front-fill"></i> DriveAway</div>
+    <nav>
+        <a th:href="@{/backoffice}" th:classappend="${activePage == 'dashboard'} ? 'active'">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        <a th:href="@{/backoffice/categories}" th:classappend="${activePage == 'categories'} ? 'active'">
+            <i class="bi bi-tags"></i> Catégories
+        </a>
+        <a th:href="@{/backoffice/vehicules}" th:classappend="${activePage == 'vehicules'} ? 'active'">
+            <i class="bi bi-car-front"></i> Véhicules
+        </a>
+        <div class="divider"></div>
+        <a th:href="@{/swagger-ui.html}" target="_blank">
+            <i class="bi bi-filetype-json"></i> API Swagger
+        </a>
+        <a th:href="@{/h2-console}" target="_blank">
+            <i class="bi bi-database"></i> H2 Console
+        </a>
+    </nav>
 </div>
+
+<!-- Main content -->
+<div class="main-content">
+    <div th:replace="~{${contentTemplate} :: content}">Content goes here</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

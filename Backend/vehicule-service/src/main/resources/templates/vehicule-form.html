@@ -2,83 +2,244 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="content">
-    <h2 class="mb-4">
-        <i class="bi bi-car-front"></i>
-        <span th:text="${vehicule.idVehicule != null} ? 'Modifier le véhicule' : 'Nouveau véhicule'"></span>
-    </h2>
+    <div class="section-header">
+        <h2>
+            <i class="bi bi-car-front"></i>
+            <span th:text="${vehicule.idVehicule != null} ? 'Modifier le véhicule' : 'Nouveau véhicule'"></span>
+        </h2>
+        <a th:href="@{/backoffice/vehicules}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Retour
+        </a>
+    </div>
 
-    <div class="card stat-card">
-        <div class="card-body">
-            <form th:action="@{/backoffice/vehicules/save}" method="post" th:object="${vehicule}">
-                <input type="hidden" th:field="*{idVehicule}">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="stat-card">
+                <div class="p-4">
+                    <form th:action="@{/backoffice/vehicules/save}" method="post" th:object="${vehicule}"
+                          id="vForm" novalidate onsubmit="return validateVForm()">
+                        <input type="hidden" th:field="*{idVehicule}">
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Immatriculation *</label>
-                        <input type="text" class="form-control" th:field="*{immatriculation}" required maxlength="20"
-                               placeholder="Ex: TU-1234-AB">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Catégorie *</label>
-                        <select class="form-select" th:field="*{idCategorie}" required>
-                            <option value="">-- Choisir --</option>
-                            <option th:each="c : ${allCategories}" th:value="${c.idCategorie()}"
-                                    th:text="${c.nom()}"></option>
-                        </select>
+                        <!-- Row 1: Immatriculation & Catégorie -->
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label">Immatriculation *</label>
+                                <input type="text" class="form-control" th:field="*{immatriculation}" id="vImmat"
+                                       maxlength="20" placeholder="Ex: TU-1234-AB">
+                                <div class="invalid-feedback" id="vImmatError">L'immatriculation est obligatoire</div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label">Catégorie *</label>
+                                <select class="form-select" th:field="*{idCategorie}" id="vCategorie">
+                                    <option value="">-- Choisir une catégorie --</option>
+                                    <option th:each="c : ${allCategories}" th:value="${c.idCategorie()}"
+                                            th:text="${c.nom()}"></option>
+                                </select>
+                                <div class="invalid-feedback" id="vCategorieError">La catégorie est obligatoire</div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Marque & Modèle -->
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label">Marque *</label>
+                                <input type="text" class="form-control" th:field="*{marque}" id="vMarque"
+                                       maxlength="50" placeholder="Ex: Renault, BMW, Mercedes...">
+                                <div class="invalid-feedback" id="vMarqueError">La marque est obligatoire</div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label">Modèle *</label>
+                                <input type="text" class="form-control" th:field="*{modele}" id="vModele"
+                                       maxlength="50" placeholder="Ex: Clio, X5, E-Class...">
+                                <div class="invalid-feedback" id="vModeleError">Le modèle est obligatoire</div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Année, Kilométrage, Statut -->
+                        <div class="row">
+                            <div class="col-md-4 mb-4">
+                                <label class="form-label">Année *</label>
+                                <input type="number" class="form-control" th:field="*{annee}" id="vAnnee"
+                                       min="1900" max="2100" placeholder="2024">
+                                <div class="invalid-feedback" id="vAnneeError">Année invalide (1900-2100)</div>
+                            </div>
+                            <div class="col-md-4 mb-4">
+                                <label class="form-label">Kilométrage *</label>
+                                <input type="number" class="form-control" th:field="*{kilometrage}" id="vKm"
+                                       min="0" max="9999999" placeholder="15000">
+                                <div class="invalid-feedback" id="vKmError">Kilométrage invalide</div>
+                            </div>
+                            <div class="col-md-4 mb-4">
+                                <label class="form-label">Statut *</label>
+                                <select class="form-select" th:field="*{statut}" id="vStatut">
+                                    <option value="DISPONIBLE">Disponible</option>
+                                    <option value="LOUE">Loué</option>
+                                    <option value="EN_MAINTENANCE">En maintenance</option>
+                                    <option value="HORS_SERVICE">Hors service</option>
+                                </select>
+                                <div class="invalid-feedback" id="vStatutError">Le statut est obligatoire</div>
+                            </div>
+                        </div>
+
+                        <!-- Images -->
+                        <div class="mb-4">
+                            <label class="form-label">Images (URLs)</label>
+                            <textarea class="form-control" th:field="*{images}" id="vImages" rows="3" maxlength="2000"
+                                      placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg"
+                                      oninput="previewVImages()"></textarea>
+                            <div class="invalid-feedback" id="vImagesError">URL(s) invalide(s)</div>
+                            <div class="form-text">Séparer les URLs par des virgules. Max 2000 caractères.</div>
+                            <!-- Preview -->
+                            <div id="vImagePreview" class="d-flex gap-2 mt-3 flex-wrap"></div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Enregistrer
+                            </button>
+                            <a th:href="@{/backoffice/vehicules}" class="btn btn-secondary">Annuler</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Side help -->
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="p-4">
+                    <h6 style="font-weight:700; color:var(--accent); margin-bottom:12px;">
+                        <i class="bi bi-info-circle me-1"></i> Guide
+                    </h6>
+                    <ul style="color:var(--text-secondary); font-size:0.85rem; padding-left:18px; line-height:2;">
+                        <li><strong>Immatriculation</strong> — unique, ex: TU-1234-AB</li>
+                        <li><strong>Catégorie</strong> — doit exister</li>
+                        <li><strong>Marque</strong> — 2 à 50 caractères</li>
+                        <li><strong>Modèle</strong> — 1 à 50 caractères</li>
+                        <li><strong>Année</strong> — entre 1900 et 2100</li>
+                        <li><strong>Kilométrage</strong> — valeur ≥ 0</li>
+                        <li><strong>Images</strong> — URLs séparées par virgules</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Statut explanation -->
+            <div class="stat-card mt-3">
+                <div class="p-4">
+                    <h6 style="font-weight:700; color:var(--accent); margin-bottom:12px;">
+                        <i class="bi bi-info-circle me-1"></i> Statuts
+                    </h6>
+                    <div class="d-flex flex-column gap-2">
+                        <span><span class="badge badge-disponible">DISPONIBLE</span> — prêt à louer</span>
+                        <span><span class="badge badge-loue">LOUE</span> — actuellement en location</span>
+                        <span><span class="badge badge-maintenance">EN_MAINTENANCE</span> — en réparation</span>
+                        <span><span class="badge badge-hors-service">HORS_SERVICE</span> — retiré du parc</span>
                     </div>
                 </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Marque *</label>
-                        <input type="text" class="form-control" th:field="*{marque}" required maxlength="50"
-                               placeholder="Ex: Renault, BMW, Mercedes...">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Modèle *</label>
-                        <input type="text" class="form-control" th:field="*{modele}" required maxlength="50"
-                               placeholder="Ex: Clio, X5, E-Class...">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">Année</label>
-                        <input type="number" class="form-control" th:field="*{annee}" min="1900" max="2100"
-                               placeholder="2024">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">Kilométrage</label>
-                        <input type="number" class="form-control" th:field="*{kilometrage}" min="0"
-                               placeholder="15000">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">Statut *</label>
-                        <select class="form-select" th:field="*{statut}" required>
-                            <option value="DISPONIBLE">Disponible</option>
-                            <option value="LOUE">Loué</option>
-                            <option value="EN_MAINTENANCE">En maintenance</option>
-                            <option value="HORS_SERVICE">Hors service</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Images (URLs)</label>
-                    <textarea class="form-control" th:field="*{images}" rows="3" maxlength="2000"
-                              placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg"></textarea>
-                    <div class="form-text">Séparer les URLs par des virgules. Ces images apparaîtront en carousel.</div>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-lg"></i> Enregistrer
-                    </button>
-                    <a th:href="@{/backoffice/vehicules}" class="btn btn-secondary">Annuler</a>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
+
+    <script>
+        // Image preview
+        function previewVImages() {
+            const raw = document.getElementById('vImages').value;
+            const container = document.getElementById('vImagePreview');
+            container.innerHTML = '';
+            if (!raw.trim()) return;
+
+            const urls = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            urls.forEach((url, i) => {
+                if (url.match(/^https?:\/\/.+/)) {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = 'Preview ' + (i + 1);
+                    img.style.cssText = 'width:80px; height:60px; object-fit:cover; border-radius:8px; border:2px solid var(--border-color);';
+                    img.onerror = () => { img.style.display = 'none'; };
+                    container.appendChild(img);
+                }
+            });
+        }
+        // Init preview
+        previewVImages();
+
+        // Validation
+        function validateVForm() {
+            let valid = true;
+            const fields = [
+                { id: 'vImmat', errId: 'vImmatError', required: true, minLen: 3, label: "L'immatriculation" },
+                { id: 'vMarque', errId: 'vMarqueError', required: true, minLen: 2, label: 'La marque' },
+                { id: 'vModele', errId: 'vModeleError', required: true, minLen: 1, label: 'Le modèle' },
+            ];
+
+            // Reset
+            document.querySelectorAll('.form-control, .form-select').forEach(el => el.classList.remove('is-invalid'));
+
+            // Text fields
+            fields.forEach(f => {
+                const el = document.getElementById(f.id);
+                const val = el.value.trim();
+                if (f.required && !val) {
+                    el.classList.add('is-invalid');
+                    document.getElementById(f.errId).textContent = f.label + ' est obligatoire';
+                    valid = false;
+                } else if (f.minLen && val.length < f.minLen) {
+                    el.classList.add('is-invalid');
+                    document.getElementById(f.errId).textContent = f.label + ' doit contenir au moins ' + f.minLen + ' caractères';
+                    valid = false;
+                }
+            });
+
+            // Catégorie
+            const cat = document.getElementById('vCategorie');
+            if (!cat.value) {
+                cat.classList.add('is-invalid');
+                valid = false;
+            }
+
+            // Année
+            const annee = document.getElementById('vAnnee');
+            const anneeVal = parseInt(annee.value);
+            if (!annee.value || isNaN(anneeVal) || anneeVal < 1900 || anneeVal > 2100) {
+                annee.classList.add('is-invalid');
+                document.getElementById('vAnneeError').textContent =
+                    !annee.value ? "L'année est obligatoire" : 'Année invalide (1900-2100)';
+                valid = false;
+            }
+
+            // Kilométrage
+            const km = document.getElementById('vKm');
+            const kmVal = parseInt(km.value);
+            if (!km.value || isNaN(kmVal) || kmVal < 0) {
+                km.classList.add('is-invalid');
+                document.getElementById('vKmError').textContent =
+                    !km.value ? 'Le kilométrage est obligatoire' : 'Le kilométrage doit être ≥ 0';
+                valid = false;
+            }
+
+            // Images: validate URLs if provided
+            const images = document.getElementById('vImages');
+            const imgVal = images.value.trim();
+            if (imgVal) {
+                const urls = imgVal.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                const badUrls = urls.filter(u => !u.match(/^https?:\/\/.+/));
+                if (badUrls.length > 0) {
+                    images.classList.add('is-invalid');
+                    document.getElementById('vImagesError').textContent =
+                        'URL invalide: ' + badUrls[0].substring(0, 40) + '...';
+                    valid = false;
+                }
+            }
+
+            return valid;
+        }
+
+        // Live clear validation on input
+        document.querySelectorAll('#vForm .form-control, #vForm .form-select').forEach(el => {
+            el.addEventListener('input', () => el.classList.remove('is-invalid'));
+            el.addEventListener('change', () => el.classList.remove('is-invalid'));
+        });
+    </script>
 </div>
 </body>
 </html>
