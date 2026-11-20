@@ -9,6 +9,8 @@ import com.driveaway.vehicule.model.Categorie;
 import com.driveaway.vehicule.model.Vehicule;
 import com.driveaway.vehicule.repository.CategorieRepository;
 import com.driveaway.vehicule.repository.VehiculeRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,12 @@ public class VehiculeService {
         return vehiculeRepository.findAll().stream()
                 .map(VehiculeMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<VehiculeResponse> findPage(Pageable pageable) {
+        return vehiculeRepository.findAll(pageable)
+                .map(VehiculeMapper::toResponse);
     }
 
     @Transactional(readOnly = true)

@@ -10,6 +10,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +41,18 @@ public class VehiculeController {
     @ApiResponse(responseCode = "200", description = "List of vehicles")
     public List<VehiculeResponse> findAll() {
         return vehiculeService.findAll();
+    }
+
+    @GetMapping("/page")
+    @Operation(summary = "List vehicles with pagination and sorting")
+    @ApiResponse(responseCode = "200", description = "Paginated vehicles")
+    public Page<VehiculeResponse> findPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size,
+            @RequestParam(defaultValue = "idVehicule") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+        Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        return vehiculeService.findPage(PageRequest.of(page, size, sort));
     }
 
     @GetMapping("/{id}")
