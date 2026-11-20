@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <h2 class="mb-4">
+        <i class="bi bi-tags"></i>
+        <span th:text="${categorie.idCategorie != null} ? 'Modifier la catégorie' : 'Nouvelle catégorie'"></span>
+    </h2>
+
+    <div class="card stat-card">
+        <div class="card-body">
+            <form th:action="@{/backoffice/categories/save}" method="post" th:object="${categorie}">
+                <input type="hidden" th:field="*{idCategorie}">
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nom *</label>
+                    <input type="text" class="form-control" th:field="*{nom}" required maxlength="100"
+                           placeholder="Ex: SUV, Berline, Citadine...">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Description</label>
+                    <textarea class="form-control" th:field="*{description}" rows="3" maxlength="500"
+                              placeholder="Description de la catégorie..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" th:field="*{statut}" id="statutSwitch">
+                        <label class="form-check-label" for="statutSwitch">Catégorie active</label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Enregistrer
+                    </button>
+                    <a th:href="@{/backoffice/categories}" class="btn btn-secondary">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

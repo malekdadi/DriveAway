@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-car-front"></i> Véhicules</h2>
+        <a th:href="@{/backoffice/vehicules/new}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Nouveau véhicule
+        </a>
+    </div>
+
+    <!-- Alert messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="card stat-card mb-3">
+        <div class="card-body">
+            <form th:action="@{/backoffice/vehicules}" method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small">Statut</label>
+                    <select name="statut" class="form-select">
+                        <option value="">Tous</option>
+                        <option value="DISPONIBLE" th:selected="${filterStatut == 'DISPONIBLE'}">Disponible</option>
+                        <option value="LOUE" th:selected="${filterStatut == 'LOUE'}">Loué</option>
+                        <option value="EN_MAINTENANCE" th:selected="${filterStatut == 'EN_MAINTENANCE'}">En maintenance</option>
+                        <option value="HORS_SERVICE" th:selected="${filterStatut == 'HORS_SERVICE'}">Hors service</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Catégorie</label>
+                    <select name="categorie" class="form-select">
+                        <option value="">Toutes</option>
+                        <option th:each="c : ${allCategories}" th:value="${c.idCategorie()}"
+                                th:text="${c.nom()}" th:selected="${filterCategorie == c.idCategorie()}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Recherche marque</label>
+                    <input type="text" name="marque" class="form-control" th:value="${filterMarque}" placeholder="Ex: Renault">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-funnel"></i> Filtrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card stat-card">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Immatriculation</th>
+                    <th>Marque</th>
+                    <th>Modèle</th>
+                    <th>Année</th>
+                    <th>Km</th>
+                    <th>Catégorie</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="v : ${vehicules}">
+                    <td th:text="${v.idVehicule()}"></td>
+                    <td><code th:text="${v.immatriculation()}"></code></td>
+                    <td th:text="${v.marque()}"></td>
+                    <td th:text="${v.modele()}"></td>
+                    <td th:text="${v.annee()}"></td>
+                    <td th:text="${#numbers.formatInteger(v.kilometrage(), 1, 'COMMA')} + ' km'"></td>
+                    <td th:text="${v.categorie()?.nom()}"></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${v.statut() == 'DISPONIBLE'} ? 'badge-disponible' :
+                              (${v.statut() == 'LOUE'} ? 'badge-loue' :
+                              (${v.statut() == 'EN_MAINTENANCE'} ? 'badge-maintenance' : 'badge-hors-service'))"
+                              th:text="${v.statut()}"></span>
+                    </td>
+                    <td>
+                        <a th:href="@{/backoffice/vehicules/edit/{id}(id=${v.idVehicule()})}"
+                           class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <form th:action="@{/backoffice/vehicules/delete/{id}(id=${v.idVehicule()})}"
+                              method="post" style="display:inline"
+                              onsubmit="return confirm('Supprimer ce véhicule ?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(vehicules)}">
+                    <td colspan="9" class="text-center text-muted">Aucun véhicule trouvé</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

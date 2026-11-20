@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <h2 class="mb-4">
+        <i class="bi bi-car-front"></i>
+        <span th:text="${vehicule.idVehicule != null} ? 'Modifier le véhicule' : 'Nouveau véhicule'"></span>
+    </h2>
+
+    <div class="card stat-card">
+        <div class="card-body">
+            <form th:action="@{/backoffice/vehicules/save}" method="post" th:object="${vehicule}">
+                <input type="hidden" th:field="*{idVehicule}">
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Immatriculation *</label>
+                        <input type="text" class="form-control" th:field="*{immatriculation}" required maxlength="20"
+                               placeholder="Ex: TU-1234-AB">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Catégorie *</label>
+                        <select class="form-select" th:field="*{idCategorie}" required>
+                            <option value="">-- Choisir --</option>
+                            <option th:each="c : ${allCategories}" th:value="${c.idCategorie()}"
+                                    th:text="${c.nom()}"></option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Marque *</label>
+                        <input type="text" class="form-control" th:field="*{marque}" required maxlength="50"
+                               placeholder="Ex: Renault, BMW, Mercedes...">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Modèle *</label>
+                        <input type="text" class="form-control" th:field="*{modele}" required maxlength="50"
+                               placeholder="Ex: Clio, X5, E-Class...">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Année</label>
+                        <input type="number" class="form-control" th:field="*{annee}" min="1900" max="2100"
+                               placeholder="2024">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Kilométrage</label>
+                        <input type="number" class="form-control" th:field="*{kilometrage}" min="0"
+                               placeholder="15000">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Statut *</label>
+                        <select class="form-select" th:field="*{statut}" required>
+                            <option value="DISPONIBLE">Disponible</option>
+                            <option value="LOUE">Loué</option>
+                            <option value="EN_MAINTENANCE">En maintenance</option>
+                            <option value="HORS_SERVICE">Hors service</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Enregistrer
+                    </button>
+                    <a th:href="@{/backoffice/vehicules}" class="btn btn-secondary">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

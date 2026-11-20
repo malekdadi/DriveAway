@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-tags"></i> Catégories</h2>
+        <a th:href="@{/backoffice/categories/new}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Nouvelle catégorie
+        </a>
+    </div>
+
+    <!-- Alert messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="card stat-card">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nom</th>
+                    <th>Description</th>
+                    <th>Statut</th>
+                    <th>Véhicules</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="c : ${categories}">
+                    <td th:text="${c.idCategorie()}"></td>
+                    <td class="fw-bold" th:text="${c.nom()}"></td>
+                    <td th:text="${c.description()}"></td>
+                    <td>
+                        <span class="badge" th:classappend="${c.statut()} ? 'bg-success' : 'bg-secondary'"
+                              th:text="${c.statut()} ? 'Active' : 'Inactive'"></span>
+                    </td>
+                    <td th:text="${c.nombreVehicules()}"></td>
+                    <td>
+                        <a th:href="@{/backoffice/categories/edit/{id}(id=${c.idCategorie()})}"
+                           class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <form th:action="@{/backoffice/categories/delete/{id}(id=${c.idCategorie()})}"
+                              method="post" style="display:inline"
+                              onsubmit="return confirm('Supprimer cette catégorie ?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(categories)}">
+                    <td colspan="6" class="text-center text-muted">Aucune catégorie</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
