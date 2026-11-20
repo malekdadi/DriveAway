@@ -2,6 +2,7 @@ package com.driveaway.vehicule.controller;
 
 import com.driveaway.vehicule.dto.*;
 import com.driveaway.vehicule.service.CategorieService;
+import com.driveaway.vehicule.service.FileStorageService;
 import com.driveaway.vehicule.service.VehiculeService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,10 +18,14 @@ public class BackofficeController {
 
     private final CategorieService categorieService;
     private final VehiculeService vehiculeService;
+    private final FileStorageService fileStorageService;
 
-    public BackofficeController(CategorieService categorieService, VehiculeService vehiculeService) {
+    public BackofficeController(CategorieService categorieService,
+                                VehiculeService vehiculeService,
+                                FileStorageService fileStorageService) {
         this.categorieService = categorieService;
         this.vehiculeService = vehiculeService;
+        this.fileStorageService = fileStorageService;
     }
 
     // ==================== Dashboard ====================
@@ -82,15 +87,23 @@ public class BackofficeController {
     public String saveCategorie(@ModelAttribute CategorieFormDTO form, RedirectAttributes ra) {
         try {
             CategorieRequest request = new CategorieRequest(form.getNom(), form.getDescription(), form.getStatut());
+            String imageUrl = form.getImageUrl();
+
+            // Handle uploaded file if present
+            if (form.getImageFile() != null && !form.getImageFile().isEmpty()) {
+                imageUrl = fileStorageService.saveFile(form.getImageFile());
+            }
+
             if (form.getIdCategorie() != null) {
                 categorieService.update(form.getIdCategorie(), request);
-                categorieService.updateImageUrl(form.getIdCategorie(), form.getImageUrl());
+                if (imageUrl != null) {
+                    categorieService.updateImageUrl(form.getIdCategorie(), imageUrl);
+                }
                 ra.addFlashAttribute("success", "Catégorie modifiée avec succès");
             } else {
                 CategorieResponse created = categorieService.create(request);
-                // set image url on the newly created category
-                if (form.getImageUrl() != null && !form.getImageUrl().isBlank()) {
-                    categorieService.updateImageUrl(created.idCategorie(), form.getImageUrl());
+                if (imageUrl != null && !imageUrl.isBlank()) {
+                    categorieService.updateImageUrl(created.idCategorie(), imageUrl);
                 }
                 ra.addFlashAttribute("success", "Catégorie créée avec succès");
             }
@@ -165,14 +178,31 @@ public class BackofficeController {
                     form.getImmatriculation(), form.getMarque(), form.getModele(),
                     form.getAnnee(), form.getKilometrage(), form.getStatut(), form.getIdCategorie()
             );
+
+            // Handle uploaded files if any
+            List<String> newUploadedImages = fileStorageService.saveFiles(form.getImageFiles());
+            String finalImages = form.getImages();
+
+            if (!newUploadedImages.isEmpty()) {
+                String uploadedStr = String.join(", ", newUploadedImages);
+                if (finalImages != null && !finalImages.isBlank()) {
+                    finalImages = finalImages + ", " + uploadedStr;
+                } else {
+                    finalImages = uploadedStr;
+                }
+            }
+
             if (form.getIdVehicule() != null) {
                 vehiculeService.update(form.getIdVehicule(), request);
-                // Update images separately
-                vehiculeService.updateImages(form.getIdVehicule(), form.getImages());
+                if (finalImages != null) {
+                    vehiculeService.updateImages(form.getIdVehicule(), finalImages);
+                }
                 ra.addFlashAttribute("success", "Véhicule modifié avec succès");
             } else {
                 VehiculeResponse created = vehiculeService.create(request);
-                vehiculeService.updateImages(created.idVehicule(), form.getImages());
+                if (finalImages != null && !finalImages.isBlank()) {
+                    vehiculeService.updateImages(created.idVehicule(), finalImages);
+                }
                 ra.addFlashAttribute("success", "Véhicule ajouté avec succès");
             }
         } catch (Exception e) {

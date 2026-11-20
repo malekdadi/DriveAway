@@ -1,5 +1,9 @@
 package com.driveaway.vehicule.dto;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
 public class VehiculeFormDTO {
     private Long idVehicule;
     private String immatriculation;
@@ -10,6 +14,7 @@ public class VehiculeFormDTO {
     private String statut;
     private Long idCategorie;
     private String images;
+    private List<MultipartFile> imageFiles;
 
     public Long getIdVehicule() { return idVehicule; }
     public void setIdVehicule(Long idVehicule) { this.idVehicule = idVehicule; }
@@ -37,4 +42,7 @@ public class VehiculeFormDTO {
 
     public String getImages() { return images; }
     public void setImages(String images) { this.images = images; }
+
+    public List<MultipartFile> getImageFiles() { return imageFiles; }
+    public void setImageFiles(List<MultipartFile> imageFiles) { this.imageFiles = imageFiles; }
 }

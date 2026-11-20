@@ -16,9 +16,10 @@
         <div class="col-md-8">
             <div class="stat-card">
                 <div class="p-4">
-                    <form th:action="@{/backoffice/vehicules/save}" method="post" th:object="${vehicule}"
+                    <form th:action="@{/backoffice/vehicules/save}" method="post" enctype="multipart/form-data" th:object="${vehicule}"
                           id="vForm" novalidate onsubmit="return validateVForm()">
                         <input type="hidden" th:field="*{idVehicule}">
+                        <input type="hidden" th:field="*{images}" id="vExistingImages">
 
                         <!-- Row 1: Immatriculation & Catégorie -->
                         <div class="row">
@@ -64,10 +65,10 @@
                                 <div class="invalid-feedback" id="vAnneeError">Année invalide (1900-2100)</div>
                             </div>
                             <div class="col-md-4 mb-4">
-                                <label class="form-label">Kilométrage *</label>
+                                <label class="form-label">Kilométrage (km) *</label>
                                 <input type="number" class="form-control" th:field="*{kilometrage}" id="vKm"
                                        min="0" max="9999999" placeholder="15000">
-                                <div class="invalid-feedback" id="vKmError">Kilométrage invalide</div>
+                                <div class="invalid-feedback" id="vKmError">Kilométrage invalide (&ge; 0)</div>
                             </div>
                             <div class="col-md-4 mb-4">
                                 <label class="form-label">Statut *</label>
@@ -81,20 +82,45 @@
                             </div>
                         </div>
 
-                        <!-- Images -->
+                        <!-- Row 4: Image Upload (Multiple, < 2.5 MB each) -->
                         <div class="mb-4">
-                            <label class="form-label">Images (URLs)</label>
-                            <textarea class="form-control" th:field="*{images}" id="vImages" rows="3" maxlength="2000"
-                                      placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg"
-                                      oninput="previewVImages()"></textarea>
-                            <div class="invalid-feedback" id="vImagesError">URL(s) invalide(s)</div>
-                            <div class="form-text">Séparer les URLs par des virgules. Max 2000 caractères.</div>
-                            <!-- Preview -->
-                            <div id="vImagePreview" class="d-flex gap-2 mt-3 flex-wrap"></div>
+                            <label class="form-label">Images du véhicule (Upload &lt; 2.5 Mo par image)</label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" name="imageFiles" id="vImageFiles"
+                                       accept="image/*" multiple onchange="handleVFilesSelect(this)">
+                                <button class="btn btn-outline-secondary" type="button" id="vClearFilesBtn" style="display:none;" onclick="clearVFiles()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback d-block" id="vFilesError" style="display:none !important;"></div>
+                            <div class="form-text">Vous pouvez sélectionner plusieurs images pour le carrousel. Taille max : 2.5 Mo par image.</div>
+
+                            <!-- Image Previews Container -->
+                            <div class="mt-3">
+                                <!-- Existing images if editing -->
+                                <div th:if="${vehicule.images != null and !vehicule.images.isEmpty()}" id="vExistingContainer" class="mb-3">
+                                    <div class="small fw-bold text-muted mb-2">Images actuelles :</div>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <div th:each="img : ${#strings.arraySplit(vehicule.images, ',')}" class="position-relative">
+                                            <img th:src="${#strings.trim(img)}" alt="Véhicule actuel"
+                                                 style="width:80px; height:60px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color);">
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted mt-1">L'ajout de nouveaux fichiers viendra s'ajouter ou renouveler ces images.</div>
+                                </div>
+
+                                <!-- New selected images preview -->
+                                <div id="vNewPreviewContainer" style="display:none;">
+                                    <div class="small fw-bold text-success mb-2">
+                                        <i class="bi bi-check2-circle me-1"></i>Nouvelles images prêtes à être téléversées :
+                                    </div>
+                                    <div id="vNewImagesGrid" class="d-flex gap-2 flex-wrap"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary" id="vSubmitBtn">
                                 <i class="bi bi-check-lg me-1"></i> Enregistrer
                             </button>
                             <a th:href="@{/backoffice/vehicules}" class="btn btn-secondary">Annuler</a>
@@ -104,36 +130,36 @@
             </div>
         </div>
 
-        <!-- Side help -->
+        <!-- Side help & Contrôle de saisie -->
         <div class="col-md-4">
-            <div class="stat-card">
+            <div class="stat-card mb-3">
                 <div class="p-4">
                     <h6 style="font-weight:700; color:var(--accent); margin-bottom:12px;">
-                        <i class="bi bi-info-circle me-1"></i> Guide
+                        <i class="bi bi-shield-check me-1"></i> Contrôle de saisie
                     </h6>
                     <ul style="color:var(--text-secondary); font-size:0.85rem; padding-left:18px; line-height:2;">
-                        <li><strong>Immatriculation</strong> — unique, ex: TU-1234-AB</li>
-                        <li><strong>Catégorie</strong> — doit exister</li>
-                        <li><strong>Marque</strong> — 2 à 50 caractères</li>
-                        <li><strong>Modèle</strong> — 1 à 50 caractères</li>
-                        <li><strong>Année</strong> — entre 1900 et 2100</li>
-                        <li><strong>Kilométrage</strong> — valeur ≥ 0</li>
-                        <li><strong>Images</strong> — URLs séparées par virgules</li>
+                        <li><strong>Immatriculation</strong> : obligatoire, 3 à 20 caractères, unique.</li>
+                        <li><strong>Catégorie</strong> : sélection obligatoire.</li>
+                        <li><strong>Marque</strong> : obligatoire, 2 à 50 caractères.</li>
+                        <li><strong>Modèle</strong> : obligatoire, 1 à 50 caractères.</li>
+                        <li><strong>Année</strong> : entre 1900 et 2100.</li>
+                        <li><strong>Kilométrage</strong> : valeur positive &ge; 0.</li>
+                        <li><strong>Statut</strong> : disponible, loué, etc.</li>
+                        <li><strong>Images</strong> : upload &lt; 2.5 Mo par image.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- Statut explanation -->
-            <div class="stat-card mt-3">
+            <div class="stat-card">
                 <div class="p-4">
                     <h6 style="font-weight:700; color:var(--accent); margin-bottom:12px;">
-                        <i class="bi bi-info-circle me-1"></i> Statuts
+                        <i class="bi bi-info-circle me-1"></i> Statuts disponibles
                     </h6>
-                    <div class="d-flex flex-column gap-2">
-                        <span><span class="badge badge-disponible">DISPONIBLE</span> — prêt à louer</span>
-                        <span><span class="badge badge-loue">LOUE</span> — actuellement en location</span>
-                        <span><span class="badge badge-maintenance">EN_MAINTENANCE</span> — en réparation</span>
-                        <span><span class="badge badge-hors-service">HORS_SERVICE</span> — retiré du parc</span>
+                    <div class="d-flex flex-column gap-2" style="font-size:0.85rem;">
+                        <span><span class="badge badge-disponible">DISPONIBLE</span> Prêt pour la location</span>
+                        <span><span class="badge badge-loue">LOUE</span> Actuellement en cours de location</span>
+                        <span><span class="badge badge-maintenance">EN_MAINTENANCE</span> En atelier de réparation</span>
+                        <span><span class="badge badge-hors-service">HORS_SERVICE</span> Retiré temporairement</span>
                     </div>
                 </div>
             </div>
@@ -141,100 +167,190 @@
     </div>
 
     <script>
-        // Image preview
-        function previewVImages() {
-            const raw = document.getElementById('vImages').value;
-            const container = document.getElementById('vImagePreview');
-            container.innerHTML = '';
-            if (!raw.trim()) return;
+        const MAX_FILE_SIZE_BYTES = 2.5 * 1024 * 1024; // 2.5 MB = 2,621,440 bytes
+        let areVFilesValid = true;
 
-            const urls = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
-            urls.forEach((url, i) => {
-                if (url.match(/^https?:\/\/.+/)) {
-                    const img = document.createElement('img');
-                    img.src = url;
-                    img.alt = 'Preview ' + (i + 1);
-                    img.style.cssText = 'width:80px; height:60px; object-fit:cover; border-radius:8px; border:2px solid var(--border-color);';
-                    img.onerror = () => { img.style.display = 'none'; };
-                    container.appendChild(img);
+        // Multiple files handling & validation
+        function handleVFilesSelect(input) {
+            const filesError = document.getElementById('vFilesError');
+            const clearBtn = document.getElementById('vClearFilesBtn');
+            const previewContainer = document.getElementById('vNewPreviewContainer');
+            const grid = document.getElementById('vNewImagesGrid');
+
+            input.classList.remove('is-invalid');
+            filesError.style.display = 'none';
+            filesError.textContent = '';
+            grid.innerHTML = '';
+
+            if (!input.files || input.files.length === 0) {
+                previewContainer.style.display = 'none';
+                clearBtn.style.display = 'none';
+                areVFilesValid = true;
+                return;
+            }
+
+            clearBtn.style.display = '';
+            const files = Array.from(input.files);
+
+            // Validate each file
+            for (let file of files) {
+                if (!file.type.startsWith('image/')) {
+                    input.classList.add('is-invalid');
+                    filesError.textContent = `Erreur : Le fichier "${file.name}" n'est pas une image valide.`;
+                    filesError.style.display = 'block';
+                    previewContainer.style.display = 'none';
+                    areVFilesValid = false;
+                    return;
                 }
+
+                if (file.size > MAX_FILE_SIZE_BYTES) {
+                    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+                    input.classList.add('is-invalid');
+                    filesError.textContent = `Erreur : Le fichier "${file.name}" (${sizeMb} Mo) dépasse la limite autorisée de 2.5 Mo.`;
+                    filesError.style.display = 'block';
+                    previewContainer.style.display = 'none';
+                    areVFilesValid = false;
+                    return;
+                }
+            }
+
+            // All files valid -> show preview thumbnails
+            areVFilesValid = true;
+            previewContainer.style.display = 'block';
+
+            files.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const wrapper = document.createElement('div');
+                    wrapper.style.cssText = 'position:relative; text-align:center;';
+
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = file.name;
+                    img.style.cssText = 'width:85px; height:65px; object-fit:cover; border-radius:8px; border:2px solid var(--accent);';
+
+                    const caption = document.createElement('div');
+                    caption.style.cssText = 'font-size:0.7rem; color:var(--text-muted); max-width:85px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+                    caption.textContent = `${(file.size / 1024).toFixed(0)} Ko`;
+
+                    wrapper.appendChild(img);
+                    wrapper.appendChild(caption);
+                    grid.appendChild(wrapper);
+                };
+                reader.readAsDataURL(file);
             });
         }
-        // Init preview
-        previewVImages();
 
-        // Validation
+        function clearVFiles() {
+            const input = document.getElementById('vImageFiles');
+            input.value = '';
+            handleVFilesSelect(input);
+        }
+
+        // Form Validation on Submit
         function validateVForm() {
             let valid = true;
-            const fields = [
-                { id: 'vImmat', errId: 'vImmatError', required: true, minLen: 3, label: "L'immatriculation" },
-                { id: 'vMarque', errId: 'vMarqueError', required: true, minLen: 2, label: 'La marque' },
-                { id: 'vModele', errId: 'vModeleError', required: true, minLen: 1, label: 'Le modèle' },
-            ];
 
-            // Reset
-            document.querySelectorAll('.form-control, .form-select').forEach(el => el.classList.remove('is-invalid'));
+            // Reset error states
+            document.querySelectorAll('#vForm .form-control, #vForm .form-select').forEach(el => el.classList.remove('is-invalid'));
 
-            // Text fields
-            fields.forEach(f => {
-                const el = document.getElementById(f.id);
-                const val = el.value.trim();
-                if (f.required && !val) {
-                    el.classList.add('is-invalid');
-                    document.getElementById(f.errId).textContent = f.label + ' est obligatoire';
-                    valid = false;
-                } else if (f.minLen && val.length < f.minLen) {
-                    el.classList.add('is-invalid');
-                    document.getElementById(f.errId).textContent = f.label + ' doit contenir au moins ' + f.minLen + ' caractères';
-                    valid = false;
-                }
-            });
+            // 1. Immatriculation
+            const immat = document.getElementById('vImmat');
+            const immatVal = immat.value.trim();
+            if (!immatVal) {
+                immat.classList.add('is-invalid');
+                document.getElementById('vImmatError').textContent = "L'immatriculation est obligatoire.";
+                valid = false;
+            } else if (immatVal.length < 3) {
+                immat.classList.add('is-invalid');
+                document.getElementById('vImmatError').textContent = "L'immatriculation doit contenir au moins 3 caractères.";
+                valid = false;
+            } else if (immatVal.length > 20) {
+                immat.classList.add('is-invalid');
+                document.getElementById('vImmatError').textContent = "L'immatriculation ne doit pas dépasser 20 caractères.";
+                valid = false;
+            }
 
-            // Catégorie
+            // 2. Catégorie
             const cat = document.getElementById('vCategorie');
             if (!cat.value) {
                 cat.classList.add('is-invalid');
+                document.getElementById('vCategorieError').textContent = "Veuillez sélectionner une catégorie.";
                 valid = false;
             }
 
-            // Année
+            // 3. Marque
+            const marque = document.getElementById('vMarque');
+            const marqueVal = marque.value.trim();
+            if (!marqueVal) {
+                marque.classList.add('is-invalid');
+                document.getElementById('vMarqueError').textContent = "La marque est obligatoire.";
+                valid = false;
+            } else if (marqueVal.length < 2) {
+                marque.classList.add('is-invalid');
+                document.getElementById('vMarqueError').textContent = "La marque doit contenir au moins 2 caractères.";
+                valid = false;
+            } else if (marqueVal.length > 50) {
+                marque.classList.add('is-invalid');
+                document.getElementById('vMarqueError').textContent = "La marque ne doit pas dépasser 50 caractères.";
+                valid = false;
+            }
+
+            // 4. Modèle
+            const modele = document.getElementById('vModele');
+            const modeleVal = modele.value.trim();
+            if (!modeleVal) {
+                modele.classList.add('is-invalid');
+                document.getElementById('vModeleError').textContent = "Le modèle est obligatoire.";
+                valid = false;
+            } else if (modeleVal.length > 50) {
+                modele.classList.add('is-invalid');
+                document.getElementById('vModeleError').textContent = "Le modèle ne doit pas dépasser 50 caractères.";
+                valid = false;
+            }
+
+            // 5. Année
             const annee = document.getElementById('vAnnee');
-            const anneeVal = parseInt(annee.value);
-            if (!annee.value || isNaN(anneeVal) || anneeVal < 1900 || anneeVal > 2100) {
+            const anneeVal = parseInt(annee.value, 10);
+            if (!annee.value) {
                 annee.classList.add('is-invalid');
-                document.getElementById('vAnneeError').textContent =
-                    !annee.value ? "L'année est obligatoire" : 'Année invalide (1900-2100)';
+                document.getElementById('vAnneeError').textContent = "L'année est obligatoire.";
+                valid = false;
+            } else if (isNaN(anneeVal) || anneeVal < 1900 || anneeVal > 2100) {
+                annee.classList.add('is-invalid');
+                document.getElementById('vAnneeError').textContent = "L'année doit être comprise entre 1900 et 2100.";
                 valid = false;
             }
 
-            // Kilométrage
+            // 6. Kilométrage
             const km = document.getElementById('vKm');
-            const kmVal = parseInt(km.value);
-            if (!km.value || isNaN(kmVal) || kmVal < 0) {
+            const kmVal = parseInt(km.value, 10);
+            if (km.value === '' || km.value === null) {
                 km.classList.add('is-invalid');
-                document.getElementById('vKmError').textContent =
-                    !km.value ? 'Le kilométrage est obligatoire' : 'Le kilométrage doit être ≥ 0';
+                document.getElementById('vKmError').textContent = "Le kilométrage est obligatoire.";
+                valid = false;
+            } else if (isNaN(kmVal) || kmVal < 0) {
+                km.classList.add('is-invalid');
+                document.getElementById('vKmError').textContent = "Le kilométrage doit être une valeur positive (>= 0).";
                 valid = false;
             }
 
-            // Images: validate URLs if provided
-            const images = document.getElementById('vImages');
-            const imgVal = images.value.trim();
-            if (imgVal) {
-                const urls = imgVal.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                const badUrls = urls.filter(u => !u.match(/^https?:\/\/.+/));
-                if (badUrls.length > 0) {
-                    images.classList.add('is-invalid');
-                    document.getElementById('vImagesError').textContent =
-                        'URL invalide: ' + badUrls[0].substring(0, 40) + '...';
-                    valid = false;
-                }
+            // 7. Statut
+            const statut = document.getElementById('vStatut');
+            if (!statut.value) {
+                statut.classList.add('is-invalid');
+                valid = false;
+            }
+
+            // 8. Files validation check
+            if (!areVFilesValid) {
+                valid = false;
             }
 
             return valid;
         }
 
-        // Live clear validation on input
+        // Live reset on input
         document.querySelectorAll('#vForm .form-control, #vForm .form-select').forEach(el => {
             el.addEventListener('input', () => el.classList.remove('is-invalid'));
             el.addEventListener('change', () => el.classList.remove('is-invalid'));
