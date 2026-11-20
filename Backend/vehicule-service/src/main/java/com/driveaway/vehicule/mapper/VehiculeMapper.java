@@ -32,6 +32,7 @@ public final class VehiculeMapper {
                 categorie.getNom(),
                 categorie.getDescription(),
                 categorie.getStatut(),
+                categorie.getImageUrl(),
                 categorie.getVehicules() != null ? categorie.getVehicules().size() : 0
         );
     }
@@ -57,6 +58,7 @@ public final class VehiculeMapper {
                 vehicule.getAnnee(),
                 vehicule.getKilometrage(),
                 vehicule.getStatut(),
+                vehicule.getImageList(),
                 toResponse(vehicule.getCategorie())
         );
     }

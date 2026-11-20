@@ -27,6 +27,10 @@ public class Vehicule {
     @Column(nullable = false, length = 20)
     private String statut;
 
+    /** Comma-separated image URLs for this vehicle */
+    @Column(length = 2000)
+    private String images;
+
     /** Owning side: many vehicles belong to one category. */
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "id_categorie", nullable = false)
@@ -58,4 +62,14 @@ public class Vehicule {
 
     public Categorie getCategorie() { return categorie; }
     public void setCategorie(Categorie categorie) { this.categorie = categorie; }
+
+    public String getImages() { return images; }
+    public void setImages(String images) { this.images = images; }
+
+    /** Helper: returns image URLs as a list */
+    public java.util.List<String> getImageList() {
+        if (images == null || images.isBlank()) return java.util.List.of();
+        return java.util.Arrays.stream(images.split(","))
+                .map(String::trim).filter(s -> !s.isEmpty()).toList();
+    }
 }

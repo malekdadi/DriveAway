@@ -23,6 +23,9 @@ public class Categorie {
     @Column(nullable = false)
     private Boolean statut;
 
+    @Column(length = 500)
+    private String imageUrl;
+
     /** Inverse side: one category has many vehicles. */
     @OneToMany(mappedBy = "categorie")
     private List<Vehicule> vehicules = new ArrayList<>();
@@ -43,4 +46,7 @@ public class Categorie {
     public void setStatut(Boolean statut) { this.statut = statut; }
 
     public List<Vehicule> getVehicules() { return vehicules; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }

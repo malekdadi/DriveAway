@@ -69,6 +69,7 @@ public class BackofficeController {
         form.setNom(cat.nom());
         form.setDescription(cat.description());
         form.setStatut(cat.statut());
+        form.setImageUrl(cat.imageUrl());
 
         model.addAttribute("categorie", form);
         model.addAttribute("activePage", "categories");
@@ -78,29 +79,34 @@ public class BackofficeController {
     }
 
     @PostMapping("/categories/save")
-    public String saveCategorie(@ModelAttribute CategorieFormDTO form, RedirectAttributes redirectAttributes) {
+    public String saveCategorie(@ModelAttribute CategorieFormDTO form, RedirectAttributes ra) {
         try {
             CategorieRequest request = new CategorieRequest(form.getNom(), form.getDescription(), form.getStatut());
             if (form.getIdCategorie() != null) {
                 categorieService.update(form.getIdCategorie(), request);
-                redirectAttributes.addFlashAttribute("success", "Catégorie modifiée avec succès");
+                categorieService.updateImageUrl(form.getIdCategorie(), form.getImageUrl());
+                ra.addFlashAttribute("success", "Catégorie modifiée avec succès");
             } else {
-                categorieService.create(request);
-                redirectAttributes.addFlashAttribute("success", "Catégorie créée avec succès");
+                CategorieResponse created = categorieService.create(request);
+                // set image url on the newly created category
+                if (form.getImageUrl() != null && !form.getImageUrl().isBlank()) {
+                    categorieService.updateImageUrl(created.idCategorie(), form.getImageUrl());
+                }
+                ra.addFlashAttribute("success", "Catégorie créée avec succès");
             }
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/backoffice/categories";
     }
 
     @PostMapping("/categories/delete/{id}")
-    public String deleteCategorie(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    public String deleteCategorie(@PathVariable Long id, RedirectAttributes ra) {
         try {
             categorieService.delete(id);
-            redirectAttributes.addFlashAttribute("success", "Catégorie supprimée");
+            ra.addFlashAttribute("success", "Catégorie supprimée");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/backoffice/categories";
     }
@@ -161,6 +167,7 @@ public class BackofficeController {
         form.setKilometrage(v.kilometrage());
         form.setStatut(v.statut());
         form.setIdCategorie(v.categorie() != null ? v.categorie().idCategorie() : null);
+        form.setImages(String.join(", ", v.images()));
 
         model.addAttribute("vehicule", form);
         model.addAttribute("allCategories", categorieService.findAll());
@@ -171,7 +178,7 @@ public class BackofficeController {
     }
 
     @PostMapping("/vehicules/save")
-    public String saveVehicule(@ModelAttribute VehiculeFormDTO form, RedirectAttributes redirectAttributes) {
+    public String saveVehicule(@ModelAttribute VehiculeFormDTO form, RedirectAttributes ra) {
         try {
             VehiculeRequest request = new VehiculeRequest(
                     form.getImmatriculation(), form.getMarque(), form.getModele(),
@@ -179,24 +186,27 @@ public class BackofficeController {
             );
             if (form.getIdVehicule() != null) {
                 vehiculeService.update(form.getIdVehicule(), request);
-                redirectAttributes.addFlashAttribute("success", "Véhicule modifié avec succès");
+                // Update images separately
+                vehiculeService.updateImages(form.getIdVehicule(), form.getImages());
+                ra.addFlashAttribute("success", "Véhicule modifié avec succès");
             } else {
-                vehiculeService.create(request);
-                redirectAttributes.addFlashAttribute("success", "Véhicule ajouté avec succès");
+                VehiculeResponse created = vehiculeService.create(request);
+                vehiculeService.updateImages(created.idVehicule(), form.getImages());
+                ra.addFlashAttribute("success", "Véhicule ajouté avec succès");
             }
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/backoffice/vehicules";
     }
 
     @PostMapping("/vehicules/delete/{id}")
-    public String deleteVehicule(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    public String deleteVehicule(@PathVariable Long id, RedirectAttributes ra) {
         try {
             vehiculeService.delete(id);
-            redirectAttributes.addFlashAttribute("success", "Véhicule supprimé");
+            ra.addFlashAttribute("success", "Véhicule supprimé");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/backoffice/vehicules";
     }

@@ -2,6 +2,8 @@ package com.driveaway.vehicule.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.util.List;
+
 @Schema(description = "Vehicle returned by the API")
 public record VehiculeResponse(
 
@@ -25,6 +27,9 @@ public record VehiculeResponse(
 
         @Schema(example = "DISPONIBLE")
         String statut,
+
+        @Schema(description = "Image URLs")
+        List<String> images,
 
         @Schema(description = "Category info")
         CategorieResponse categorie

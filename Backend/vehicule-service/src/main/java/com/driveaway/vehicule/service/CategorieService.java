@@ -81,6 +81,14 @@ public class CategorieService {
                 .toList();
     }
 
+    // ==================== Image ====================
+
+    public CategorieResponse updateImageUrl(Long id, String imageUrl) {
+        Categorie categorie = getCategorie(id);
+        categorie.setImageUrl(imageUrl);
+        return VehiculeMapper.toResponse(categorie);
+    }
+
     // ==================== Helper ====================
 
     Categorie getCategorie(Long id) {

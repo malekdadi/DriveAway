@@ -120,6 +120,12 @@ public class VehiculeService {
         return VehiculeMapper.toResponse(vehicule);
     }
 
+    public VehiculeResponse updateImages(Long id, String images) {
+        Vehicule vehicule = getVehicule(id);
+        vehicule.setImages(images);
+        return VehiculeMapper.toResponse(vehicule);
+    }
+
     // ==================== Statistics ====================
 
     @Transactional(readOnly = true)

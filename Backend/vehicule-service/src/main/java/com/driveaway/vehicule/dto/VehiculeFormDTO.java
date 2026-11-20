@@ -9,6 +9,7 @@ public class VehiculeFormDTO {
     private Integer kilometrage;
     private String statut;
     private Long idCategorie;
+    private String images;
 
     public Long getIdVehicule() { return idVehicule; }
     public void setIdVehicule(Long idVehicule) { this.idVehicule = idVehicule; }
@@ -33,4 +34,7 @@ public class VehiculeFormDTO {
 
     public Long getIdCategorie() { return idCategorie; }
     public void setIdCategorie(Long idCategorie) { this.idCategorie = idCategorie; }
+
+    public String getImages() { return images; }
+    public void setImages(String images) { this.images = images; }
 }

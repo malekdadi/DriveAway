@@ -66,6 +66,7 @@
                 <thead>
                 <tr>
                     <th>ID</th>
+                    <th>Image</th>
                     <th>Immatriculation</th>
                     <th>Marque</th>
                     <th>Modèle</th>
@@ -76,6 +77,11 @@
                 <tbody>
                 <tr th:each="v : ${recentVehicules}">
                     <td th:text="${v.idVehicule()}"></td>
+                    <td>
+                        <img th:if="${!v.images().isEmpty()}" th:src="${v.images().get(0)}" alt="car"
+                             style="width:45px; height:35px; object-fit:cover; border-radius:4px;">
+                        <i th:if="${v.images().isEmpty()}" class="bi bi-car-front text-muted"></i>
+                    </td>
                     <td><code th:text="${v.immatriculation()}"></code></td>
                     <td th:text="${v.marque()}"></td>
                     <td th:text="${v.modele()}"></td>

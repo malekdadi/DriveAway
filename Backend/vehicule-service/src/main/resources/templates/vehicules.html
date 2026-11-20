@@ -9,7 +9,6 @@
         </a>
     </div>
 
-    <!-- Alert messages -->
     <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
         <span th:text="${success}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -42,7 +41,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small">Recherche marque</label>
+                    <label class="form-label small">Marque</label>
                     <input type="text" name="marque" class="form-control" th:value="${filterMarque}" placeholder="Ex: Renault">
                 </div>
                 <div class="col-md-3">
@@ -52,55 +51,77 @@
         </div>
     </div>
 
-    <div class="card stat-card">
-        <div class="card-body">
-            <table class="table table-hover">
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Immatriculation</th>
-                    <th>Marque</th>
-                    <th>Modèle</th>
-                    <th>Année</th>
-                    <th>Km</th>
-                    <th>Catégorie</th>
-                    <th>Statut</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="v : ${vehicules}">
-                    <td th:text="${v.idVehicule()}"></td>
-                    <td><code th:text="${v.immatriculation()}"></code></td>
-                    <td th:text="${v.marque()}"></td>
-                    <td th:text="${v.modele()}"></td>
-                    <td th:text="${v.annee()}"></td>
-                    <td th:text="${#numbers.formatInteger(v.kilometrage(), 1, 'COMMA')} + ' km'"></td>
-                    <td th:text="${v.categorie()?.nom()}"></td>
-                    <td>
+    <!-- Vehicle cards with image carousel -->
+    <div class="row">
+        <div th:each="v, iterStat : ${vehicules}" class="col-md-4 mb-4">
+            <div class="card stat-card h-100">
+                <!-- Image Carousel -->
+                <div th:if="${!v.images().isEmpty()}" th:id="'carousel-' + ${iterStat.index}" class="carousel slide" data-bs-ride="false">
+                    <div class="carousel-inner">
+                        <div th:each="img, imgStat : ${v.images()}" class="carousel-item" th:classappend="${imgStat.first} ? 'active'">
+                            <img th:src="${img}" class="d-block w-100" style="height:200px; object-fit:cover; border-radius:12px 12px 0 0;" alt="Vehicle">
+                        </div>
+                    </div>
+                    <!-- Indicators -->
+                    <div class="carousel-indicators" th:if="${v.images().size() > 1}">
+                        <button th:each="img, imgStat : ${v.images()}" type="button"
+                                th:attr="data-bs-target='#carousel-' + ${iterStat.index}, data-bs-slide-to=${imgStat.index}"
+                                th:classappend="${imgStat.first} ? 'active'"
+                                style="width:8px; height:8px; border-radius:50%;"></button>
+                    </div>
+                </div>
+                <div th:if="${v.images().isEmpty()}" class="bg-light d-flex align-items-center justify-content-center" style="height:200px; border-radius:12px 12px 0 0;">
+                    <i class="bi bi-car-front" style="font-size:3rem; color:#ccc;"></i>
+                </div>
+
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <h6 class="card-title mb-1" th:text="${v.marque() + ' ' + v.modele()}"></h6>
                         <span class="badge"
                               th:classappend="${v.statut() == 'DISPONIBLE'} ? 'badge-disponible' :
                               (${v.statut() == 'LOUE'} ? 'badge-loue' :
                               (${v.statut() == 'EN_MAINTENANCE'} ? 'badge-maintenance' : 'badge-hors-service'))"
                               th:text="${v.statut()}"></span>
-                    </td>
-                    <td>
+                    </div>
+                    <p class="text-muted small mb-2">
+                        <code th:text="${v.immatriculation()}"></code> &middot;
+                        <span th:text="${v.annee()}"></span> &middot;
+                        <span th:text="${v.kilometrage() + ' km'}"></span>
+                    </p>
+                    <p class="small mb-2">
+                        <i class="bi bi-tag"></i> <span th:text="${v.categorie()?.nom()}"></span>
+                    </p>
+                    <div class="d-flex gap-1">
                         <a th:href="@{/backoffice/vehicules/edit/{id}(id=${v.idVehicule()})}"
-                           class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                           class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Modifier</a>
                         <form th:action="@{/backoffice/vehicules/delete/{id}(id=${v.idVehicule()})}"
                               method="post" style="display:inline"
                               onsubmit="return confirm('Supprimer ce véhicule ?')">
                             <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(vehicules)}">
-                    <td colspan="9" class="text-center text-muted">Aucun véhicule trouvé</td>
-                </tr>
-                </tbody>
-            </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div th:if="${#lists.isEmpty(vehicules)}" class="col-12">
+            <div class="card stat-card"><div class="card-body text-center text-muted">Aucun véhicule trouvé</div></div>
         </div>
     </div>
+
+    <!-- Auto-slide on hover -->
+    <script>
+        document.querySelectorAll('.carousel').forEach(el => {
+            const carousel = new bootstrap.Carousel(el, { interval: false });
+            el.addEventListener('mouseenter', () => {
+                carousel._config.interval = 1500;
+                carousel.cycle();
+            });
+            el.addEventListener('mouseleave', () => {
+                carousel._config.interval = false;
+                carousel.pause();
+            });
+        });
+    </script>
 </div>
 </body>
 </html>

@@ -5,6 +5,7 @@ public class CategorieFormDTO {
     private String nom;
     private String description;
     private Boolean statut = true;
+    private String imageUrl;
 
     public Long getIdCategorie() { return idCategorie; }
     public void setIdCategorie(Long idCategorie) { this.idCategorie = idCategorie; }
@@ -17,4 +18,7 @@ public class CategorieFormDTO {
 
     public Boolean getStatut() { return statut; }
     public void setStatut(Boolean statut) { this.statut = statut; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }
