@@ -41,6 +41,10 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka/
     enabled: false          # Set to true when Eureka server is running
+    register-with-eureka: true
+    fetch-registry: true
+    healthcheck:
+      enabled: true         # Propagates Actuator health (/health) to Eureka!
   instance:
     prefer-ip-address: true
 
@@ -51,12 +55,23 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
-# --- Actuator & Health (Gateway & Eureka) ---
+# --- Actuator & Observability (Health, Info, Metrics) ---
 management:
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: health, info, metrics
   endpoint:
     health:
       show-details: always
+  info:
+    env:
+      enabled: true
+
+# --- App Info published to /actuator/info (Eureka dashboard link) ---
+info:
+  app:
+    name: vehicule-service
+    version: 1.0.0
+    description: Microservice de gestion des véhicules et catégories
+    team: DriveAway - Achref Reguiai
