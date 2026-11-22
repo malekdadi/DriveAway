@@ -121,8 +121,10 @@
                         <span class="badge"
                               th:classappend="${v.statut() == 'DISPONIBLE'} ? 'badge-disponible' :
                               (${v.statut() == 'LOUE'} ? 'badge-loue' :
-                              (${v.statut() == 'EN_MAINTENANCE'} ? 'badge-maintenance' : 'badge-hors-service'))"
-                              th:text="${v.statut()}"></span>
+                              (${v.statut() == 'EN_MAINTENANCE'} ? 'badge-maintenance' : 'badge-hors-service'))">
+                            <span class="badge-dot"></span>
+                            <span th:text="${v.statut()}"></span>
+                        </span>
                     </div>
 
                     <div class="mb-2" style="display:flex; gap:8px; flex-wrap:wrap;">
