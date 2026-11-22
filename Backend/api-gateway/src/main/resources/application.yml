@@ -1,0 +1,115 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      # ===================================================================
+      # Centralized Global CORS (Permits Frontend on any laptop/IP)
+      # ===================================================================
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      # ===================================================================
+      # Dynamic Service Discovery Locator (Auto-routes ANY service in Eureka)
+      # e.g., http://gateway:8080/vehicule-service/api/vehicules
+      # ===================================================================
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      # ===================================================================
+      # Explicit Route Mapping (Clean REST URLs for Angular Frontend)
+      # ===================================================================
+      routes:
+        # 1. Vehicule & Categorie Service (Achref)
+        - id: vehicule-service-routes
+          uri: lb://VEHICULE-SERVICE
+          predicates:
+            - Path=/api/vehicules/**, /api/categories/**, /uploads/**
+
+        # 2. Reservation Service
+        - id: reservation-service-routes
+          uri: lb://RESERVATION-SERVICE
+          predicates:
+            - Path=/api/reservations/**
+
+        # 3. Agence Service
+        - id: agence-service-routes
+          uri: lb://AGENCE-SERVICE
+          predicates:
+            - Path=/api/agences/**
+
+        # 4. Paiement & Facturation Service
+        - id: paiement-service-routes
+          uri: lb://PAIEMENT-SERVICE
+          predicates:
+            - Path=/api/paiements/**, /api/factures/**
+
+        # 5. Utilisateur & Auth Service
+        - id: utilisateur-service-routes
+          uri: lb://UTILISATEUR-SERVICE
+          predicates:
+            - Path=/api/utilisateurs/**, /api/auth/**
+
+        # 6. Maintenance Service
+        - id: maintenance-service-routes
+          uri: lb://MAINTENANCE-SERVICE
+          predicates:
+            - Path=/api/maintenance/**
+
+# ===================================================================
+# Dynamic Eureka Discovery Configuration (Multi-PC Network Ready)
+# ===================================================================
+eureka:
+  client:
+    service-url:
+      # Defaults to localhost:8761, but dynamically overridable by env variable:
+      # EUREKA_SERVER_URL=http://<EUREKA_HOST_IP>:8761/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    # CRITICAL: Broadcasts real network IP (e.g. 192.168.1.25) so other PCs can reach it
+    prefer-ip-address: true
+    # Faster heartbeat & eviction for dynamic lab/Wi-Fi environments
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+# ===================================================================
+# Observability & Monitoring (Spring Boot Actuator)
+# ===================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+# Logging level for live monitoring of gateway traffic
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+    com.driveaway.gateway: DEBUG
+    reactor.netty: INFO
