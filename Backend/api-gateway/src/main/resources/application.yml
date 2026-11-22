@@ -11,6 +11,7 @@ spring:
       # Centralized Global CORS (Permits Frontend on any laptop/IP)
       # ===================================================================
       globalcors:
+        add-to-simple-url-handler-mapping: true
         cors-configurations:
           '[/**]':
             allowedOriginPatterns: "*"
@@ -42,7 +43,7 @@ spring:
         - id: vehicule-service-routes
           uri: lb://VEHICULE-SERVICE
           predicates:
-            - Path=/api/vehicules/**, /api/categories/**, /uploads/**
+            - Path=/api/vehicules/**, /api/categories/**, /uploads/**, /backoffice/**
 
         # 2. Reservation Service
         - id: reservation-service-routes
