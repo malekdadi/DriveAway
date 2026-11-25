@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DriveAway · Test facturation</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #eef2f7; color: #15243b; font: 1rem/1.5 system-ui, sans-serif; }
+  header { background: #14243b; color: white; padding: 1.5rem max(1rem, calc((100% - 68rem)/2)); }
+  h1, h2, p { margin: 0 0 .75rem; }
+  h1 { font-size: clamp(1.6rem, 4vw, 2.35rem); margin-top: .3rem; }
+  h2 { font-size: 1.2rem; }
+  main { max-width: 70rem; margin: auto; padding: 1rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; align-items: start; }
+  section { background: white; border: 1px solid #d4deeb; border-radius: .9rem; padding: 1rem; margin-bottom: 1rem; }
+  label { display: grid; gap: .25rem; margin-bottom: .65rem; font-size: .9rem; font-weight: 600; }
+  input, select, button, a.button { font: inherit; border-radius: .45rem; padding: .45rem .65rem; }
+  input, select { width: 100%; min-width: 0; color: inherit; border: 1px solid #9caec4; background: white; }
+  button, a.button { border: 1px solid #234b88; background: #234b88; color: white; cursor: pointer; text-decoration: none; }
+  button.secondary, a.button { background: white; color: #234b88; }
+  button:disabled { opacity: .55; cursor: default; }
+  .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .row label { flex: 1 1 8rem; }
+  .hint { color: #485a72; font-size: .9rem; }
+  #message { overflow-wrap: anywhere; }
+  #message[data-error] { color: #a42037; }
+  pre { background: #f1f5fa; padding: .8rem; border-radius: .45rem; overflow: auto; max-height: 24rem; }
+  [hidden] { display: none !important; }
+  body { background: #edf1f6; color: #14233a; }
+  header {
+    background: radial-gradient(ellipse at 85% 0%, #263e71, transparent 55%), #101c32;
+    padding: 2rem max(1rem, calc((100% - 68rem)/2)) 3.7rem;
+  }
+  header strong { display: inline-block; color: #a8c2ff; letter-spacing: .04em; }
+  header p { color: #d8e4fa; max-width: 43rem; }
+  main { margin-top: -2.7rem; }
+  section { padding: 1.2rem; box-shadow: 0 6px 18px #14233a08; }
+  .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .7rem; margin-bottom: 1rem; }
+  .metric { background: #f1f5fc; padding: .65rem .8rem; border-radius: .6rem; }
+  .metric span { display: block; color: #485a72; font-size: .9rem; }
+  .metric strong { display: block; font-size: 1.25rem; }
+  .section-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+  .section-heading h2 { margin: 0; }
+  .toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: .5rem; margin: .75rem 0; }
+  .toolbar label { flex: 1 1 14rem; margin: 0; }
+  .table-wrap { overflow: auto; }
+  table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: .92rem; }
+  th, td { padding: .55rem .65rem; text-align: left; border-bottom: 1px solid #e3eaf2; }
+  th { color: #485a72; background: #f3f6fb; }
+  td:first-child { font-weight: 600; }
+  #message { font-weight: 600; }
+  #invoice-result { margin-top: .85rem; padding: .7rem; background: #edf3fd; border-radius: .5rem; }
+  :focus-visible { outline: 3px solid #527bc4; outline-offset: 2px; }
+</style>
+<header>
+  <strong>DriveAway</strong>
+  <h1>Test de facturation</h1>
+  <p>Les actions de cette page utilisent la base MySQL configurée dans le service. Utilise une adresse de test.</p>
+</header>
+<main>
+  <section aria-label="Résultat">
+    <div class="overview" aria-label="Statistiques de facturation">
+      <div class="metric"><span>Factures</span><strong id="metric-count">—</strong></div>
+      <div class="metric"><span>Réglées</span><strong id="metric-paid">—</strong></div>
+      <div class="metric"><span>Total facturé</span><strong id="metric-total">—</strong></div>
+      <div class="metric"><span>Reste à encaisser</span><strong id="metric-balance">—</strong></div>
+    </div>
+    <p id="message" role="status">Connexion à l’API…</p>
+    <div class="row">
+      <button class="secondary" id="stats">Actualiser les statistiques</button>
+      <button class="secondary" id="availability">Disponibilité Konnect</button>
+    </div>
+    <details id="details" hidden><summary>Réponse de l’API</summary><pre id="response"></pre></details>
+  </section>
+  <div class="grid">
+    <section>
+      <h2>Caution</h2>
+      <form id="deposit">
+        <label>Véhicule<select name="vehicule" required></select></label>
+        <label>Montant en DT<input name="montant" type="number" min=".01" step=".01" value="100" required></label>
+        <button>Enregistrer la caution</button>
+      </form>
+      <p class="hint" id="deposit-result"></p>
+      <button class="secondary" id="deposits">Voir les cautions</button>
+    </section>
+    <section>
+      <h2>Facture</h2>
+      <form id="invoice">
+        <label>E-mail<input name="email" type="email" maxlength="150" value="facturation-test@example.com" required></label>
+        <label>Véhicule<select name="vehicule" required></select></label>
+        <div class="row">
+          <label>Départ<input name="depart" type="date"></label>
+          <label>Retour<input name="retour" type="date"></label>
+        </div>
+        <label>Jours (si dates vides)<input name="jours" type="number" min="1" max="365" value="3"></label>
+        <label>ID caution (facultatif)<input name="cautionId" type="number" min="1"></label>
+        <div class="row">
+          <button>Créer</button>
+          <button type="submit" class="secondary" id="update" disabled>Modifier la facture créée</button>
+        </div>
+      </form>
+      <p class="hint" id="invoice-result">Crée une facture pour activer les paiements.</p>
+      <div class="row">
+        <a class="button" id="pdf" hidden>Télécharger le PDF</a>
+        <button class="secondary" id="refresh" disabled>Actualiser</button>
+        <button class="secondary" id="remove" disabled>Supprimer</button>
+      </div>
+    </section>
+    <section>
+      <h2>Paiements</h2>
+      <form id="cash">
+        <label>Montant en DT<input name="montant" type="number" min=".01" step=".01" required></label>
+        <label>Référence UUID<input name="reference" required></label>
+        <div class="row">
+          <button id="pay" disabled>Enregistrer les espèces</button>
+          <button type="button" class="secondary" id="reference">Nouvelle référence</button>
+        </div>
+      </form>
+      <p class="hint">Garde la même référence et le même montant pour tester un second envoi.</p>
+      <div class="row">
+        <button class="secondary" id="checkout" disabled>Créer le lien Konnect</button>
+        <button class="secondary" id="verify" disabled>Vérifier Konnect</button>
+        <a class="button" id="payment-link" target="_blank" rel="noopener" hidden>Ouvrir Konnect</a>
+      </div>
+    </section>
+  </div>
+  <section aria-labelledby="invoice-list-title">
+    <div class="section-heading"><h2 id="invoice-list-title">Factures enregistrées</h2><span class="hint" id="list-count"></span></div>
+    <form class="toolbar" id="search-form">
+      <label>Numéro, modèle ou e-mail<input id="search" type="search"></label>
+      <button class="secondary">Rechercher</button>
+    </form>
+    <p class="hint">Les factures existantes peuvent être consultées. Crée une facture ici pour essayer les écritures et les paiements.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Numéro</th><th>Véhicule</th><th>Total</th><th>Solde</th><th>E-mail</th><th>Action</th></tr></thead>
+        <tbody id="invoice-rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script>
+  const element = id => document.getElementById(id);
+  const invoice = element('invoice');
+  const cash = element('cash');
+  let current = null;
+  let busy = false;
+  const testInvoices = new Set();
+  const formatMoney = new Intl.NumberFormat('fr-TN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money = value => formatMoney.format(value) + ' DT';
+
+  async function request(path, method = 'GET', payload) {
+    const options = { method };
+    if (payload !== undefined) {
+      options.headers = { 'Content-Type': 'application/json' };
+      options.body = JSON.stringify(payload);
+    }
+    const response = await fetch('/api' + path, options);
+    const body = response.headers.get('Content-Type')?.includes('json') ? await response.json() : null;
+    if (!response.ok) throw new Error('HTTP ' + response.status + ' · ' +
+      (body?.message || body?.error || response.statusText));
+    return body;
+  }
+
+  async function run(label, action) {
+    if (busy) return;
+    busy = true;
+    const message = element('message');
+    delete message.dataset.error;
+    message.textContent = label + '…';
+    try {
+      const body = await action();
+      message.textContent = label + ' · OK';
+      element('details').hidden = body == null;
+      element('response').textContent = body == null ? '' : JSON.stringify(body, null, 2);
+    } catch (error) {
+      message.dataset.error = '';
+      message.textContent = label + ' · ' + error.message;
+      element('details').hidden = true;
+    } finally {
+      busy = false;
+    }
+  }
+
+  function showInvoice(value) {
+    if (current?.id !== value?.id) element('payment-link').hidden = true;
+    current = value;
+    const writable = value !== null && testInvoices.has(value.id);
+    const editable = writable && value.operations === 0;
+    for (const id of ['update', 'remove']) element(id).disabled = !editable;
+    element('refresh').disabled = !value;
+    for (const id of ['pay', 'checkout', 'verify']) element(id).disabled = !writable;
+    const pdf = element('pdf');
+    pdf.hidden = !value;
+    if (value) pdf.href = '/api/factures/' + value.id + '/pdf';
+    element('invoice-result').textContent = value
+      ? `${value.numero} · Total ${money(value.total)} · Caution ${money(value.caution)} · Reste ${money(value.solde)} · E-mail ${value.emailStatut}`
+      : 'Crée une facture pour activer les paiements.';
+    return value;
+  }
+
+  const invoicePath = () => '/factures/' + current.id;
+  async function loadStats() {
+    const stats = await request('/factures/stats');
+    element('metric-count').textContent = stats.factures;
+    element('metric-paid').textContent = stats.reglees;
+    element('metric-total').textContent = money(stats.total);
+    element('metric-balance').textContent = money(stats.solde);
+    return stats;
+  }
+
+  async function loadInvoices() {
+    const invoices = await request('/factures?q=' + encodeURIComponent(element('search').value));
+    element('list-count').textContent = invoices.length + ' résultat(s)';
+    const rows = invoices.map(value => {
+      const row = document.createElement('tr');
+      for (const text of [value.numero, value.modele, money(value.total), money(value.solde), value.emailStatut]) {
+        row.insertCell().textContent = text;
+      }
+      const button = document.createElement('button');
+      button.className = 'secondary';
+      button.textContent = 'Consulter';
+      button.onclick = () => run('Lecture de la facture', async () => {
+        const result = await request('/factures/' + value.id);
+        showInvoice(result);
+        cash.elements.montant.value = result.solde;
+        newReference();
+        element('invoice-result').scrollIntoView({ block: 'nearest' });
+        return result;
+      });
+      row.insertCell().append(button);
+      return row;
+    });
+    element('invoice-rows').replaceChildren(...rows);
+    return invoices;
+  }
+
+  function refreshOverview() {
+    return Promise.allSettled([loadStats(), loadInvoices()]);
+  }
+  function newReference() {
+    cash.elements.reference.value = crypto.randomUUID();
+  }
+  element('reference').onclick = newReference;
+  newReference();
+
+  invoice.onsubmit = event => {
+    event.preventDefault();
+    const update = event.submitter === element('update');
+    run(update ? 'Modification' : 'Création', async () => {
+      const values = Object.fromEntries(new FormData(invoice));
+      const payload = { email: values.email, vehicule: values.vehicule };
+      if (values.depart || values.retour) {
+        if (!values.depart || !values.retour) throw new Error('Renseigne les deux dates.');
+        Object.assign(payload, { depart: values.depart, retour: values.retour });
+      } else {
+        payload.jours = Number(values.jours);
+      }
+      if (values.cautionId) payload.cautionId = Number(values.cautionId);
+      const result = await request(update ? invoicePath() : '/factures', update ? 'PUT' : 'POST', payload);
+      testInvoices.add(result.id);
+      invoice.elements.cautionId.value = '';
+      cash.elements.montant.value = result.solde;
+      newReference();
+      await refreshOverview();
+      return showInvoice(result);
+    });
+  };
+
+  element('deposit').onsubmit = event => {
+    event.preventDefault();
+    run('Enregistrement de la caution', async () => {
+      const { vehicule, montant } = Object.fromEntries(new FormData(event.target));
+      const result = await request('/cautions', 'POST', { vehicule, montant: Number(montant) });
+      invoice.elements.vehicule.value = vehicule;
+      invoice.elements.cautionId.value = result.id;
+      element('deposit-result').textContent = 'Caution #' + result.id + ' renseignée dans le formulaire facture.';
+      return result;
+    });
+  };
+
+  cash.onsubmit = event => {
+    event.preventDefault();
+    if (!current) return;
+    run('Encaissement', async () => {
+      const { montant, reference } = Object.fromEntries(new FormData(cash));
+      const result = showInvoice(await request(invoicePath() + '/paiements/especes', 'POST', {
+        montant: Number(montant), reference
+      }));
+      await refreshOverview();
+      return result;
+    });
+  };
+
+  element('refresh').onclick = () => run('Lecture de la facture', async () => showInvoice(await request(invoicePath())));
+  element('remove').onclick = () => {
+    if (busy || !current || !confirm('Supprimer la facture ' + current.numero + ' ?')) return;
+    run('Suppression', async () => {
+      await request(invoicePath(), 'DELETE');
+      testInvoices.delete(current.id);
+      await refreshOverview();
+      return showInvoice(null);
+    });
+  };
+  element('checkout').onclick = () => run('Checkout Konnect', async () => {
+    const link = element('payment-link');
+    link.hidden = true;
+    const result = await request(invoicePath() + '/checkout', 'POST');
+    if (result.url) {
+      link.href = result.url;
+      link.hidden = false;
+    }
+    showInvoice(await request(invoicePath()));
+    return result;
+  });
+  element('verify').onclick = () => run('Vérification Konnect', async () => {
+    const result = showInvoice(await request(invoicePath() + '/paiements/verifier', 'POST'));
+    await refreshOverview();
+    return result;
+  });
+  element('stats').onclick = () => run('Statistiques', loadStats);
+  element('availability').onclick = async () => {
+    await run('Disponibilité Konnect', async () => {
+      const result = await request('/paiements/disponibilite');
+      element('availability').textContent = result.konnectConfigured ? 'Konnect configuré' : 'Konnect à configurer';
+      return result;
+    });
+  };
+  element('search-form').onsubmit = event => {
+    event.preventDefault();
+    run('Recherche de factures', loadInvoices);
+  };
+  element('deposits').onclick = () => run('Liste des cautions', () => request('/cautions'));
+
+  run('Catalogue véhicules', async () => {
+    const vehicles = await request('/vehicules');
+    for (const select of document.querySelectorAll('select[name="vehicule"]')) {
+      select.replaceChildren(...vehicles.map(vehicle =>
+        new Option(vehicle.modele + ' · ' + vehicle.prix + ' DT/jour', vehicle.id)));
+    }
+    await refreshOverview();
+    return vehicles;
+  });
+</script>
+</html>
