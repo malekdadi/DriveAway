@@ -8,13 +8,14 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+      defaultZone: ${EUREKA_SERVER_URL:http://100.78.116.80:8761/eureka/}
     register-with-eureka: true
     fetch-registry: true
     healthcheck:
       enabled: true
   instance:
     prefer-ip-address: true
+    ip-address: ${EUREKA_INSTANCE_IP:100.92.208.91}
     status-page-url-path: /actuator/info
     health-check-url-path: /actuator/health
 

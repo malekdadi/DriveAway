@@ -12,6 +12,7 @@ set "EUREKA_PORT=8761"
 set "PORT=8083"
 set "GATEWAY_PORT=8080"
 set "EUREKA_SERVER_URL=http://127.0.0.1:8761/eureka/"
+set "EUREKA_INSTANCE_IP=127.0.0.1"
 start "DriveAway - Eureka 8761" "%JAVA%" -jar "eureka-server\target\eureka-server-1.0.0.jar"
 call :wait_http http://127.0.0.1:8761/
 if errorlevel 1 goto failed

@@ -38,6 +38,17 @@ java -jar eureka-server/target/eureka-server-1.0.0.jar
 java -jar PAIEMENT-SERVICE/target/PAIEMENT-SERVICE-1.0.0.jar
 ```
 
+Le service de paiement cible par défaut le registre Eureka d'Achref sur
+`http://100.78.116.80:8761/eureka/` et annonce l'adresse Tailscale de Malek
+`100.92.208.91`. Pour le démarrage manuel avec Eureka local, définir ces
+variables dans le terminal du service de paiement avant de lancer le JAR.
+Le lanceur Windows les définit déjà.
+
+```powershell
+$env:EUREKA_SERVER_URL = 'http://127.0.0.1:8761/eureka/'
+$env:EUREKA_INSTANCE_IP = '127.0.0.1'
+```
+
 ```powershell
 java -jar api-gateway/target/api-gateway-1.0.0.jar
 ```
