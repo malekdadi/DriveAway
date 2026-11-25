@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `caution` (
   `date_depot` datetime NOT NULL DEFAULT current_timestamp(),
   `statut` varchar(30) NOT NULL DEFAULT 'BLOQUEE',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `paiement_id` (`paiement_id`),
+  UNIQUE KEY `uq_caution_paiement` (`paiement_id`),
   CONSTRAINT `fk_caution_paiement` FOREIGN KEY (`paiement_id`) REFERENCES `paiement` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `caution_avance` (
   `date_depot` datetime NOT NULL,
   `paiement_id` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `paiement_id` (`paiement_id`),
+  UNIQUE KEY `uq_caution_avance_paiement` (`paiement_id`),
   CONSTRAINT `fk_caution_avance_paiement` FOREIGN KEY (`paiement_id`) REFERENCES `paiement` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

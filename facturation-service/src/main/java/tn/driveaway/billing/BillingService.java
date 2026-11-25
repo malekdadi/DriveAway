@@ -3,7 +3,6 @@ package tn.driveaway.billing;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -50,7 +49,8 @@ public class BillingService {
         SELECT f.*,
           COALESCE((SELECT SUM(c.montant_caution) FROM caution c JOIN paiement p ON p.id=c.paiement_id
             WHERE p.facture_id=f.id AND p.statut='CONFIRME' AND c.statut='BLOQUEE'),0) AS caution_versee,
-          (SELECT COALESCE(CONCAT('CAU-', MAX(a.id)), CAST(MAX(c.id) AS CHAR))
+          (SELECT CASE WHEN MAX(a.id) IS NOT NULL THEN CONCAT('CAU-', MAX(a.id))
+                       WHEN MAX(c.id) IS NOT NULL THEN CONCAT('', MAX(c.id)) END
             FROM caution c JOIN paiement p ON p.id=c.paiement_id LEFT JOIN caution_avance a ON a.paiement_id=p.id
             WHERE p.facture_id=f.id AND p.statut='CONFIRME' AND c.statut='BLOQUEE') AS caution_id,
           (SELECT COUNT(*) FROM paiement p WHERE p.facture_id=f.id AND p.statut<>'EXPIRE') AS operations,
@@ -79,7 +79,7 @@ public class BillingService {
 
     Stats stats() {
         return jdbc.queryForObject("""
-            SELECT COUNT(*) n, COALESCE(SUM(reste_a_payer=0),0) paid,
+            SELECT COUNT(*) n, COALESCE(SUM(CASE WHEN reste_a_payer=0 THEN 1 ELSE 0 END),0) paid,
                 COALESCE(SUM(montant_total),0) total, COALESCE(SUM(reste_a_payer),0) balance,
                 (SELECT COALESCE(SUM(c.montant_caution),0) FROM caution c JOIN paiement p ON p.id=c.paiement_id
                     WHERE c.statut='BLOQUEE' AND p.statut='CONFIRME') deposits
@@ -337,7 +337,7 @@ public class BillingService {
     private long insert(String sql, Object... values) {
         var key = new GeneratedKeyHolder();
         jdbc.update(connection -> {
-            var statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            var statement = connection.prepareStatement(sql, new String[] {"id"});
             for (int i = 0; i < values.length; i++) statement.setObject(i + 1, values[i]);
             return statement;
         }, key);

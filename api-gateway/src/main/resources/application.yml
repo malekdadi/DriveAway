@@ -6,13 +6,11 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      server:
-        webflux:
-          routes:
-            - id: paiement-service
-              uri: lb://paiement-service
-              predicates:
-                - Path=/api/factures/**,/api/paiements/**,/api/cautions/**,/api/konnect/webhook,/api/vehicules,/test-facturation.html
+      routes:
+        - id: facturation-service
+          uri: lb://facturation-service
+          predicates:
+            - Path=/api/factures/**,/api/paiements/**,/api/cautions/**,/api/konnect/webhook,/api/vehicules,/test-facturation.html
 
 eureka:
   client:

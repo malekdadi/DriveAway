@@ -3,10 +3,11 @@ server:
 
 spring:
   application:
-    name: paiement-service
+    name: facturation-service
 
 eureka:
   client:
+    enabled: true
     service-url:
       defaultZone: ${EUREKA_SERVER_URL:http://100.78.116.80:8761/eureka/}
     register-with-eureka: true
@@ -16,7 +17,8 @@ eureka:
   instance:
     prefer-ip-address: true
     ip-address: ${EUREKA_INSTANCE_IP:100.92.208.91}
-    status-page-url-path: /actuator/info
+    instance-id: ${spring.application.name}:${eureka.instance.ip-address}:${server.port}
+    status-page-url-path: /test-facturation.html
     health-check-url-path: /actuator/health
 
 management:

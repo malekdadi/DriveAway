@@ -3,7 +3,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.8</version>
+    <version>3.2.5</version>
     <relativePath/>
   </parent>
   <groupId>tn.driveaway</groupId>
@@ -12,11 +12,11 @@
   <packaging>pom</packaging>
   <properties>
     <java.version>17</java.version>
-    <spring-cloud.version>2025.0.0</spring-cloud.version>
+    <spring-cloud.version>2023.0.1</spring-cloud.version>
   </properties>
   <modules>
     <module>eureka-server</module>
-    <module>paiement-service</module>
+    <module>facturation-service</module>
     <module>api-gateway</module>
   </modules>
   <dependencyManagement>

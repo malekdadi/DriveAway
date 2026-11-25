@@ -1,83 +1,55 @@
-# DriveAway Facturation
+﻿# DriveAway Facturation
 
-Projet Maven autonome avec Java 17, Spring Boot et Spring Cloud.
+Projet Maven Java 17, Spring Boot 3.2.5 et Spring Cloud 2023.0.1.
+Le service `facturation-service` écoute sur le port 8083 et s'inscrit
+sous `FACTURATION-SERVICE` dans le registre Eureka central d'Achref.
 
-| Application | Port local | Role |
-| --- | --- | --- |
-| Eureka | 8761 | Registre des services |
-| Paiement | 8083 | Factures, paiements, cautions et PDF |
-| API Gateway | 8080 | Routage vers PAIEMENT-SERVICE via Eureka |
+## Compiler et démarrer
 
-## MySQL
-
-Demarrer MySQL dans XAMPP. Par defaut, le service utilise la base
-`driveaway` sur `127.0.0.1:3306`, avec le compte `root` et un mot de
-passe vide. Definir `DB_URL`, `DB_USER` et `DB_PASSWORD` pour changer
-ces valeurs. Pour une nouvelle installation, creer d'abord la base avec
-`CREATE DATABASE IF NOT EXISTS driveaway CHARACTER SET utf8mb4;`.
-
-Au demarrage, Spring initialise les cinq tables de
-[PAIEMENT-SERVICE](PAIEMENT-SERVICE/src/main/resources/schema.sql)
-si elles sont absentes. Une base existante conserve ses donnees.
-
-## Demarrage
-
-Depuis le dossier de ce projet, compiler les trois modules avec
-`mvn package`. Lancer ensuite chaque commande dans un terminal separe
-dans l'ordre indique. Attendre que le dashboard Eureka s'ouvre avant de
-lancer le service de paiement. Attendre ensuite que PAIEMENT-SERVICE soit
-UP dans Eureka avant de lancer la Gateway. Si une ancienne instance
-occupe deja un des ports, l'arreter depuis son terminal avec Ctrl+C ou
-choisir un autre port.
+Depuis la racine du projet, avec Java 17 et Maven dans le PATH :
 
 ```powershell
-java -jar eureka-server/target/eureka-server-1.0.0.jar
+mvn clean package -DskipTests
+.\Lancer-Facturation.cmd
 ```
 
-```powershell
-java -jar PAIEMENT-SERVICE/target/PAIEMENT-SERVICE-1.0.0.jar
-```
+Le lanceur démarre uniquement la facturation. Le registre central est
+`http://100.78.116.80:8761/eureka/` et le Gateway central est sur le port
+8080 de la même machine. Le service annonce `100.92.208.91:8083`.
+Pour modifier ces valeurs, utiliser `EUREKA_SERVER_URL`,
+`EUREKA_INSTANCE_IP` et `PORT`.
 
-Le service de paiement cible par défaut le registre Eureka d'Achref sur
-`http://100.78.116.80:8761/eureka/` et annonce l'adresse Tailscale de Malek
-`100.92.208.91`. Pour le démarrage manuel avec Eureka local, définir ces
-variables dans le terminal du service de paiement avant de lancer le JAR.
-Le lanceur Windows les définit déjà.
+Les modules Eureka et Gateway locaux sont compilés avec le projet.
+Pour tester la facturation avec un registre local démarré séparément,
+définir dans le terminal du service :
 
 ```powershell
 $env:EUREKA_SERVER_URL = 'http://127.0.0.1:8761/eureka/'
 $env:EUREKA_INSTANCE_IP = '127.0.0.1'
+.\Lancer-Facturation.cmd
 ```
 
-```powershell
-java -jar api-gateway/target/api-gateway-1.0.0.jar
-```
+## Base de données
 
-Si Java est absent du PATH sur ce PC, remplacer `java` par
-`& 'C:\Users\pc\.jdks\ms-17.0.20.1\bin\java.exe'`.
-Les ports peuvent etre configures via `EUREKA_PORT`, `PORT` (paiement)
-et `GATEWAY_PORT`. Si le port Eureka change, definir `EUREKA_SERVER_URL`
-dans les terminaux du service et de la Gateway.
+Le service utilise MySQL sur `127.0.0.1:3306/driveaway` par défaut.
+Les variables `DB_URL`, `DB_USER` et `DB_PASSWORD` permettent de changer
+la connexion. Créer la base `driveaway` avant le premier démarrage.
+Spring crée les tables absentes à partir de
+[schema.sql](facturation-service/src/main/resources/schema.sql).
 
-### Maven sur ce PC
+Si MySQL est inaccessible au démarrage, le service utilise une base H2
+en mémoire pendant toute cette exécution. Les écritures H2 disparaissent
+à l'arrêt et ne sont pas transférées à MySQL. Redémarrer le service quand
+MySQL redevient disponible. Une erreur d'identifiants ou de schéma reste
+une erreur de configuration.
 
-Si PowerShell ne reconnait pas `mvn`, compiler depuis le dossier du projet
-avec Maven deja present dans le cache local.
+## Vérifier
 
-```powershell
-$env:JAVA_HOME = 'C:\Users\pc\.jdks\ms-17.0.20.1'
-& 'C:\Users\pc\.m2\wrapper\dists\apache-maven-3.9.16-bin\5grr65jo27hi51sujmtcldfovl\apache-maven-3.9.16\bin\mvn.cmd' package
-```
+- [Santé locale](http://127.0.0.1:8083/actuator/health) indique le moteur actif.
+- [Tableau de bord local](http://127.0.0.1:8083/test-facturation.html) permet de tester les factures.
+- Le dashboard Eureka d'Achref doit afficher `FACTURATION-SERVICE` en `UP`.
+- Si le Gateway d'Achref route `/api/factures` vers `lb://facturation-service`,
+  tester `http://100.78.116.80:8080/api/factures`.
 
-## Verification
-
-- [Dashboard Eureka](http://127.0.0.1:8761/) affiche PAIEMENT-SERVICE avec le statut UP.
-- [Sante du service](http://127.0.0.1:8083/actuator/health) affiche MySQL UP.
-- [Factures via la Gateway](http://127.0.0.1:8080/api/factures) renvoie une liste JSON.
-  Prevoir quelques secondes pour la propagation de l'enregistrement Eureka.
-
-La Gateway transmet aussi les routes de paiements, cautions, du catalogue
-de vehicules utilise par la facturation et du webhook Konnect. Le paiement
-en ligne requiert `KONNECT_API_KEY`, `KONNECT_WALLET_ID` et
-`KONNECT_WEBHOOK_URL`. L'envoi des factures requiert un serveur SMTP
-(voir `PAIEMENT-SERVICE/src/main/resources/application.properties`).
+Configurer SMTP et Konnect par variables d'environnement. Les paramètres
+sont dans [application.properties](facturation-service/src/main/resources/application.properties).
