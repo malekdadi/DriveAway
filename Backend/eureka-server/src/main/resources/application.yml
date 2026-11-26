@@ -1,0 +1,40 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+
+# Configuration Eureka Server autonome (Chapitre 4, slides 16 et 25)
+eureka:
+  instance:
+    hostname: ${EUREKA_HOSTNAME:localhost}
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    # Desactive en dev local pour eviction rapide des instances arretees (activer en prod)
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:false}
+    eviction-interval-timer-in-ms: 10000
+
+# Observabilite : contrat minimal Actuator (health, info, metrics)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: eureka-server
+    version: 1.0.0
+    description: Serveur de decouverte Netflix Eureka pour la plateforme DriveAway
+    team: DriveAway - ESPRIT AWD 2026-2027
