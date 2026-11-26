@@ -1,0 +1,98 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: agence-service
+
+  # --- Base de donnees H2 dediee (Database-per-Service) ---
+  datasource:
+    url: jdbc:h2:mem:agencedb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+
+  # --- Erreurs normalisees RFC 9457 / 7807 Problem Details ---
+  mvc:
+    problemdetails:
+      enabled: true
+
+# --- CORS (desactive par defaut car l'API Gateway :8080 gere deja CORS) ---
+app:
+  cors:
+    enabled: ${APP_CORS_ENABLED:false}
+
+# --- Service Discovery : Netflix Eureka (Chapitre 4) ---
+# Active par defaut : agence-service s'enregistre sous AGENCE-SERVICE dans Eureka (:8761).
+eureka:
+  client:
+    enabled: ${EUREKA_CLIENT_ENABLED:true}
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+    registry-fetch-interval-seconds: 5
+    initial-instance-info-replication-interval-seconds: 5
+    instance-info-replication-interval-seconds: 10
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+# --- Contrat OpenAPI 3 / Swagger UI (Chapitre 2) ---
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+# --- Observabilite : Spring Boot Actuator (Chapitre 4 - contrat minimal) ---
+# Seuls health, info et metrics sont exposes (jamais env, beans, loggers en production).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  info:
+    env:
+      enabled: true
+
+# --- Metadonnees publiees sur /actuator/info ---
+info:
+  app:
+    name: agence-service
+    version: 1.0.0
+    description: Microservice de gestion des agences et lieux de retrait pour DriveAway
+    author: Mahmoud Arfaoui
+    team: DriveAway - ESPRIT AWD 2026-2027
