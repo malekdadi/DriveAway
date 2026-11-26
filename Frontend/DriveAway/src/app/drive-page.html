@@ -162,12 +162,7 @@
         <ng-container [ngTemplateOutlet]="catalogue" />
       }
       @case ('agences') {
-        <p class="demo-label">Points de retrait de démonstration</p>
-        <div class="services-grid">
-          @for (item of agencies; track item.name) {
-            <a class="service" routerLink="/reservations" [queryParams]="{ agence: item.name }"><span class="service-icon icon" aria-hidden="true">{{ item.icon }}</span><h3>{{ item.name }}</h3><p>{{ item.area }}</p><strong>Choisir ce point de retrait ↗</strong></a>
-          }
-        </div>
+        <app-agences-module />
       }
       @case ('utilisateurs') {
         <form class="panel" ngNativeValidate (ngSubmit)="notice = 'Formulaire validé. Pour activer les comptes, connectez le service d’inscription.'">

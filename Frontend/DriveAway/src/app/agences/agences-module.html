@@ -1,0 +1,300 @@
+<div class="ag-top">
+  <div class="ag-status" [class.live]="backendConnected()">
+    <span class="ag-dot" aria-hidden="true"></span>
+    @if (backendConnected()) {
+      <span>API connectée · <strong>API Gateway → AGENCE-SERVICE (via Eureka)</strong></span>
+    } @else {
+      <span>Mode démonstration hors-ligne (démarrez <code>eureka-server</code> :8761, <code>api-gateway</code> :8090 et <code>agence-service</code> :8085)</span>
+      <button type="button" class="ag-mini" (click)="refreshAll()">Reconnecter</button>
+    }
+  </div>
+  <div class="filters ag-tabs" role="tablist" aria-label="Vue agences">
+    <button type="button" role="tab" [class.selected]="activeTab() === 'client'" [attr.aria-selected]="activeTab() === 'client'" (click)="activeTab.set('client')">
+      Explorer le réseau
+    </button>
+    <button type="button" role="tab" [class.selected]="activeTab() === 'admin'" [attr.aria-selected]="activeTab() === 'admin'" (click)="activeTab.set('admin')">
+      Gestion CRUD &amp; Paramétrage
+    </button>
+  </div>
+</div>
+
+@if (stats(); as s) {
+  <dl class="ag-kpis">
+    <div><dt>Agences actives</dt><dd>{{ s.agencesActives }} / {{ s.totalAgences }}</dd></div>
+    <div><dt>Points actifs</dt><dd>{{ s.pointsActifs }}</dd></div>
+    <div><dt>Compatibles inter-villes</dt><dd>{{ s.pointsAutreVilleAutorise }}</dd></div>
+    <div><dt>Capacité totale</dt><dd>{{ s.capaciteTotaleActive }} places</dd></div>
+  </dl>
+}
+
+@if (successMessage()) {
+  <p class="ag-alert ok" role="status">{{ successMessage() }}</p>
+}
+
+@if (problem(); as err) {
+  <div class="ag-alert err" role="alert">
+    <strong>{{ err.status ? 'HTTP ' + err.status + ' — ' : '' }}{{ err.title }}</strong>
+    <p>{{ err.detail }}</p>
+    @if (problemErrorsList().length > 0) {
+      <ul>
+        @for (entry of problemErrorsList(); track entry[0]) {
+          <li><code>{{ entry[0] }}</code> : {{ entry[1] }}</li>
+        }
+      </ul>
+    }
+  </div>
+}
+
+@if (activeTab() === 'client') {
+  <section class="ag-bar" aria-label="Recherche et filtres">
+    <form class="ag-filter-grid" (ngSubmit)="loadAgences()">
+      <label>Ville<input name="filterVille" [(ngModel)]="filterVille" placeholder="Ex: Tunis, Sousse..."></label>
+      <label>Nom d'agence<input name="filterNom" [(ngModel)]="filterNom" placeholder="Ex: Marsa, Carthage..."></label>
+      <label>Statut
+        <select name="filterStatut" [(ngModel)]="filterStatut">
+          <option value="">Tous</option>
+          @for (st of statuts; track st) { <option [value]="st">{{ statusLabel(st) }}</option> }
+        </select>
+      </label>
+      <label>Type de point
+        <select name="filterTypePoint" [(ngModel)]="filterTypePoint">
+          <option value="">Tous</option>
+          @for (tp of typesPoint; track tp) { <option [value]="tp">{{ tp }}</option> }
+        </select>
+      </label>
+      <label>Tri
+        <select name="sortBy" [(ngModel)]="sortBy">
+          <option value="nom">Nom</option>
+          <option value="ville">Ville</option>
+          <option value="heureOuverture">Heure d'ouverture</option>
+          <option value="id">ID</option>
+        </select>
+      </label>
+      <label>Ordre
+        <select name="sortDirection" [(ngModel)]="sortDirection">
+          <option value="asc">Croissant</option>
+          <option value="desc">Décroissant</option>
+        </select>
+      </label>
+      <div class="ag-checks">
+        <label class="ag-check"><input type="checkbox" name="openNow" [(ngModel)]="filterOuverteMaintenant"> Ouverte maintenant</label>
+        <label class="ag-check"><input type="checkbox" name="oneWay" [(ngModel)]="filterAutreVille"> Retour inter-villes</label>
+      </div>
+      <div class="ag-actions">
+        <button class="button" type="submit">Filtrer</button>
+        <button class="outline" type="button" (click)="resetFilters()">Réinitialiser</button>
+      </div>
+    </form>
+
+    <form class="ag-prox" (ngSubmit)="searchProximite()">
+      <strong><span class="icon" aria-hidden="true">my_location</span> Recherche par proximité (Haversine)</strong>
+      <label>Lat<input type="number" step="0.0001" name="proxLat" [(ngModel)]="proxLat"></label>
+      <label>Lng<input type="number" step="0.0001" name="proxLng" [(ngModel)]="proxLng"></label>
+      <label>Rayon (km)<input type="number" min="1" max="1000" name="proxRayon" [(ngModel)]="proxRayonKm"></label>
+      <button class="outline" type="button" (click)="useBrowserLocation()">Autour de moi</button>
+      <button class="button" type="submit">Trouver</button>
+    </form>
+  </section>
+
+  <p class="fleet-count" role="status">
+    {{ agences().length }} {{ agences().length === 1 ? 'agence' : 'agences' }}
+    @if (proximiteActive()) { · triées par distance (rayon {{ proxRayonKm }} km) }
+  </p>
+
+  <div class="ag-grid">
+    @for (agence of agences(); track agence.id) {
+      <article class="service ag-card">
+        <div class="ag-card-head">
+          <span class="service-icon icon" aria-hidden="true">{{ iconForAgence(agence) }}</span>
+          <div class="ag-badges">
+            <span class="ag-badge" [class.ok]="agence.statut === 'ACTIVE'" [class.warn]="agence.statut !== 'ACTIVE'">{{ statusLabel(agence.statut) }}</span>
+            <span class="ag-badge" [class.ok]="agence.ouverteMaintenant" [class.muted]="!agence.ouverteMaintenant">
+              {{ agence.ouverteMaintenant ? 'Ouverte' : 'Fermée' }}
+            </span>
+            @if (distancesByAgenceId()[agence.id] !== undefined) {
+              <span class="ag-badge dist">{{ distancesByAgenceId()[agence.id] }} km</span>
+            }
+          </div>
+        </div>
+
+        <h3>{{ agence.nom }}</h3>
+        <p class="ag-meta">{{ agence.ville }} · {{ agence.adresse }}</p>
+        <p class="ag-meta">
+          <span class="icon" aria-hidden="true">schedule</span> {{ formatHours(agence) }} ({{ agence.joursOuverture }})
+          · <span class="icon" aria-hidden="true">call</span> {{ agence.telephone }}
+        </p>
+
+        @if (backendConnected()) {
+          <div class="ag-verify">
+            <input type="datetime-local" [(ngModel)]="checkDateHeure" [attr.aria-label]="'Créneau à vérifier pour ' + agence.nom">
+            <button type="button" class="ag-mini" (click)="checkOuverture(agence.id)">Tester ouverture</button>
+            <button type="button" class="ag-mini" (click)="checkRetour(agence.id, true)">Retour inter-villes ?</button>
+          </div>
+          @if (ouvertureResults()[agence.id]; as ov) {
+            <p class="ag-check-res" [class.ok]="ov.ouverte">{{ ov.ouverte ? '✓' : '✕' }} {{ ov.raison }}</p>
+          }
+          @if (retourResults()[agence.id]; as rt) {
+            <p class="ag-check-res" [class.ok]="rt.retourAutorise">{{ rt.retourAutorise ? '✓' : '✕' }} {{ rt.raison }}</p>
+          }
+        }
+
+        <div class="ag-points">
+          <strong>Points de retrait ({{ agence.nombrePointsRetrait }})</strong>
+          @if (agence.pointsRetrait.length === 0) {
+            <p class="ag-empty">Aucun point de retrait rattaché.</p>
+          } @else {
+            @for (pt of agence.pointsRetrait; track pt.id) {
+              <div class="ag-point" [class.inactive]="!pt.actif">
+                <div>
+                  <strong>{{ pt.nom }}</strong> <small>({{ pt.typePoint }} · {{ pt.capaciteMax }} places)</small>
+                  <p>{{ pt.adresse }}</p>
+                  @if (pt.instructionsAcces) { <p class="ag-hint">{{ pt.instructionsAcces }}</p> }
+                </div>
+                <div class="ag-tags">
+                  <span [class.on]="pt.retraitAutorise">Retrait</span>
+                  <span [class.on]="pt.retourAutorise">Retour</span>
+                  <span [class.on]="pt.autreVilleAutorise">Inter-villes</span>
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <div class="ag-card-foot">
+          <a class="outline" routerLink="/reservations" [queryParams]="{ agence: agence.nom }">Choisir pour réserver ↗</a>
+          @if (backendConnected()) {
+            <button type="button" class="ag-mini" (click)="startEditAgence(agence)">Gérer</button>
+          }
+        </div>
+      </article>
+    }
+  </div>
+} @else {
+  <div class="ag-admin-grid">
+    <form class="panel ag-form" (ngSubmit)="submitAgence()">
+      <p class="demo-label">{{ editingAgenceId !== null ? 'PUT /api/agences/' + editingAgenceId : 'POST /api/agences' }}</p>
+      <h2>{{ editingAgenceId !== null ? 'Modifier une agence' : 'Nouvelle agence' }}</h2>
+      <div class="form-row">
+        <label>Nom *<input name="nom" required [(ngModel)]="agenceForm.nom"></label>
+        <label>Ville *<input name="ville" required [(ngModel)]="agenceForm.ville"></label>
+      </div>
+      <label>Adresse *<input name="adresse" required [(ngModel)]="agenceForm.adresse"></label>
+      <div class="form-row">
+        <label>Téléphone *<input name="telephone" required [(ngModel)]="agenceForm.telephone"></label>
+        <label>Statut
+          <select name="statut" [(ngModel)]="agenceForm.statut">
+            @for (st of statuts; track st) { <option [value]="st">{{ statusLabel(st) }}</option> }
+          </select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Ouverture *<input type="time" name="heureOuverture" required [(ngModel)]="agenceForm.heureOuverture"></label>
+        <label>Fermeture *<input type="time" name="heureFermeture" required [(ngModel)]="agenceForm.heureFermeture"></label>
+      </div>
+      <div class="form-row">
+        <label>Jours (LUN..DIM)<input name="joursOuverture" [(ngModel)]="agenceForm.joursOuverture"></label>
+        <label class="ag-check ag-check-box"><input type="checkbox" name="ouvert24h" [(ngModel)]="agenceForm.ouvert24h"> Ouverte 24h/24</label>
+      </div>
+      <div class="form-row">
+        <label>Latitude<input type="number" step="0.0001" name="lat" [(ngModel)]="agenceForm.latitude"></label>
+        <label>Longitude<input type="number" step="0.0001" name="lng" [(ngModel)]="agenceForm.longitude"></label>
+      </div>
+      <div class="ag-actions">
+        <button class="button" type="submit" [disabled]="!backendConnected()">
+          {{ editingAgenceId !== null ? 'Enregistrer (PUT)' : 'Créer (POST)' }}
+        </button>
+        @if (editingAgenceId !== null) {
+          <button class="outline" type="button" (click)="cancelEditAgence()">Annuler</button>
+        }
+      </div>
+    </form>
+
+    <form class="panel ag-form" (ngSubmit)="submitPoint()">
+      <p class="demo-label">{{ editingPointId !== null ? 'PUT /points/' + editingPointId : 'POST /api/agences/{id}/points' }}</p>
+      <h2>{{ editingPointId !== null ? 'Modifier un point' : 'Nouveau point de retrait' }}</h2>
+      <label>Agence parente *
+        <select name="pointAgenceId" [(ngModel)]="pointAgenceId" [disabled]="editingPointId !== null">
+          @for (a of agences(); track a.id) { <option [ngValue]="a.id">{{ a.nom }} ({{ a.ville }})</option> }
+        </select>
+      </label>
+      <div class="form-row">
+        <label>Nom du point *<input name="ptNom" required [(ngModel)]="pointForm.nom"></label>
+        <label>Type
+          <select name="ptType" [(ngModel)]="pointForm.typePoint">
+            @for (tp of typesPoint; track tp) { <option [value]="tp">{{ tp }}</option> }
+          </select>
+        </label>
+      </div>
+      <label>Adresse *<input name="ptAdresse" required [(ngModel)]="pointForm.adresse"></label>
+      <div class="form-row">
+        <label>Capacité max<input type="number" min="1" max="1000" name="ptCap" [(ngModel)]="pointForm.capaciteMax"></label>
+        <label>Instructions d'accès<input name="ptInstr" [(ngModel)]="pointForm.instructionsAcces"></label>
+      </div>
+      <div class="ag-checks">
+        <label class="ag-check"><input type="checkbox" name="ptRetrait" [(ngModel)]="pointForm.retraitAutorise"> Retrait</label>
+        <label class="ag-check"><input type="checkbox" name="ptRetour" [(ngModel)]="pointForm.retourAutorise"> Retour</label>
+        <label class="ag-check"><input type="checkbox" name="ptInter" [(ngModel)]="pointForm.autreVilleAutorise"> Inter-villes</label>
+        <label class="ag-check"><input type="checkbox" name="ptActif" [(ngModel)]="pointForm.actif"> Actif</label>
+      </div>
+      <div class="ag-actions">
+        <button class="button" type="submit" [disabled]="!backendConnected() || pointAgenceId === null">
+          {{ editingPointId !== null ? 'Mettre à jour (PUT)' : 'Ajouter le point (POST)' }}
+        </button>
+        @if (editingPointId !== null) {
+          <button class="outline" type="button" (click)="cancelEditPoint()">Annuler</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <section class="ag-manage-list" aria-label="Liste d'administration">
+    @for (agence of agences(); track agence.id) {
+      <article class="panel ag-manage-card">
+        <div class="ag-manage-head">
+          <div>
+            <h3>#{{ agence.id }} · {{ agence.nom }} <small>({{ agence.ville }})</small></h3>
+            <p>{{ agence.adresse }} · {{ formatHours(agence) }} · {{ agence.joursOuverture }}</p>
+          </div>
+          <div class="ag-actions">
+            <select [ngModel]="agence.statut" (ngModelChange)="changeStatut(agence, $event)" [disabled]="!backendConnected()" [attr.aria-label]="'Statut de ' + agence.nom">
+              @for (st of statuts; track st) { <option [value]="st">{{ statusLabel(st) }}</option> }
+            </select>
+            <button type="button" class="ag-mini" (click)="openHorairesEditor(agence)">PATCH Horaires</button>
+            <button type="button" class="ag-mini" (click)="startEditAgence(agence)">Modifier</button>
+            <button type="button" class="ag-mini danger" (click)="removeAgence(agence)">Supprimer</button>
+          </div>
+        </div>
+
+        @if (horairesTargetId === agence.id) {
+          <form class="ag-patch-bar" (ngSubmit)="submitHorairesPatch()">
+            <input type="time" name="hOuv" [(ngModel)]="horairesForm.heureOuverture">
+            <input type="time" name="hFerm" [(ngModel)]="horairesForm.heureFermeture">
+            <input name="hJours" [(ngModel)]="horairesForm.joursOuverture">
+            <label class="ag-check"><input type="checkbox" name="h24" [(ngModel)]="horairesForm.ouvert24h"> 24h/24</label>
+            <button type="submit" class="ag-mini">Valider PATCH</button>
+            <button type="button" class="ag-mini" (click)="horairesTargetId = null">Fermer</button>
+          </form>
+        }
+
+        <div class="ag-points">
+          @for (pt of agence.pointsRetrait; track pt.id) {
+            <div class="ag-point" [class.inactive]="!pt.actif">
+              <div>
+                <strong>{{ pt.nom }}</strong> <small>({{ pt.typePoint }} · {{ pt.capaciteMax }} pl.)</small>
+                <p>{{ pt.adresse }}</p>
+              </div>
+              <div class="ag-actions">
+                <button type="button" class="ag-chip" [class.on]="pt.retraitAutorise" (click)="togglePointFlag(pt, 'retraitAutorise')">Retrait</button>
+                <button type="button" class="ag-chip" [class.on]="pt.retourAutorise" (click)="togglePointFlag(pt, 'retourAutorise')">Retour</button>
+                <button type="button" class="ag-chip" [class.on]="pt.autreVilleAutorise" (click)="togglePointFlag(pt, 'autreVilleAutorise')">Inter-villes</button>
+                <button type="button" class="ag-chip" [class.on]="pt.actif" (click)="togglePointFlag(pt, 'actif')">{{ pt.actif ? 'Actif' : 'Inactif' }}</button>
+                <button type="button" class="ag-mini" (click)="startEditPoint(pt)">Éditer</button>
+                <button type="button" class="ag-mini danger" (click)="removePoint(pt)">×</button>
+              </div>
+            </div>
+          }
+        </div>
+      </article>
+    }
+  </section>
+}

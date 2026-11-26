@@ -1,9 +1,10 @@
-﻿import { NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import macanStudio from '../../public/media/macan-studio.jpg';
+import { AgencesModule } from './agences/agences-module';
 
 export const services = [
   { path: 'utilisateurs', icon: 'person', title: 'Espace client', description: 'Créez votre compte client.' },
@@ -53,7 +54,7 @@ function parseRentalDate(value: string): number {
 }
 
 @Component({
-  imports: [RouterLink, FormsModule, NgTemplateOutlet],
+  imports: [RouterLink, FormsModule, NgTemplateOutlet, AgencesModule],
   templateUrl: './drive-page.html',
 })
 export class DrivePage {
