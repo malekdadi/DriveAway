@@ -49,6 +49,10 @@ public class Reservation {
     @Column(name = "montant_estime", nullable = false, precision = 10, scale = 2)
     private BigDecimal montantEstime;
 
+    /** Frais retenus lors de l'annulation (null tant que la réservation n'est pas annulée). */
+    @Column(name = "frais_annulation", precision = 10, scale = 2)
+    private BigDecimal fraisAnnulation;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false, length = 20)
     private StatutReservation statut;

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -19,6 +20,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByClientIdAndStatutIn(Long clientId,
                                                 Collection<StatutReservation> statuts,
                                                 Sort sort);
+
+    /** Réservations dans un statut donné créées avant une date limite (ex. EN_ATTENTE depuis plus de 24 h). */
+    List<Reservation> findByStatutAndDateReservationBefore(StatutReservation statut, LocalDateTime limite);
 
     /** Réservations actives du véhicule qui chevauchent la période [debut, fin]. */
     @Query("""

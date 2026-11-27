@@ -18,6 +18,7 @@ public record ReservationResponse(
         LocalDate dateFin,
         BigDecimal prixJournalier,
         BigDecimal montantEstime,
+        BigDecimal fraisAnnulation,
         StatutReservation statut
 ) {
     public static ReservationResponse from(Reservation r) {
@@ -25,6 +26,6 @@ public record ReservationResponse(
                 r.getIdReservation(), r.getClientId(), r.getVehiculeId(),
                 r.getAgenceRetraitId(), r.getAgenceRetourId(), r.getDateReservation(),
                 r.getDateDebut(), r.getDateFin(), r.getPrixJournalier(),
-                r.getMontantEstime(), r.getStatut());
+                r.getMontantEstime(), r.getFraisAnnulation(), r.getStatut());
     }
 }

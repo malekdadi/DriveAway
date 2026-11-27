@@ -10,15 +10,20 @@ import com.driveaway.reservation.model.Reservation;
 import com.driveaway.reservation.model.StatutReservation;
 import com.driveaway.reservation.repository.ContratRepository;
 import com.driveaway.reservation.repository.ReservationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.List;
@@ -27,6 +32,11 @@ import java.util.Set;
 @Service
 @Transactional
 public class ReservationService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReservationService.class);
+
+    /** Durée au-delà de laquelle une réservation EN_ATTENTE non confirmée expire. */
+    static final Duration DELAI_EXPIRATION_EN_ATTENTE = Duration.ofHours(24);
 
     /** Statuts qui bloquent le véhicule sur la période. */
     private static final Set<StatutReservation> STATUTS_BLOQUANTS =
@@ -158,8 +168,29 @@ public class ReservationService {
         if (r.getStatut() == StatutReservation.ANNULEE || r.getStatut() == StatutReservation.TERMINEE) {
             throw new ConflictException("La réservation est déjà " + r.getStatut());
         }
+        r.setFraisAnnulation(calculerFraisAnnulation(r.getDateDebut(), r.getMontantEstime(), LocalDateTime.now()));
         r.setStatut(StatutReservation.ANNULEE);
         return ReservationResponse.from(r);
+    }
+
+    /**
+     * Expiration automatique : toutes les heures (à hh:00), les réservations EN_ATTENTE
+     * non confirmées 24 h après leur création passent à ANNULEE, ce qui libère le véhicule.
+     * Pas de pénalité : l'annulation vient du système, pas du client.
+     */
+    @Scheduled(cron = "0 0 * * * *")
+    public void expirerReservationsEnAttente() {
+        LocalDateTime limite = LocalDateTime.now().minus(DELAI_EXPIRATION_EN_ATTENTE);
+        List<Reservation> expirees = reservationRepository
+                .findByStatutAndDateReservationBefore(StatutReservation.EN_ATTENTE, limite);
+        for (Reservation r : expirees) {
+            r.setStatut(StatutReservation.ANNULEE);
+            r.setFraisAnnulation(BigDecimal.ZERO.setScale(2));
+        }
+        if (!expirees.isEmpty()) {
+            log.info("{} réservation(s) EN_ATTENTE expirée(s) et annulée(s) : {}", expirees.size(),
+                    expirees.stream().map(Reservation::getIdReservation).toList());
+        }
     }
 
     // ---------- DELETE ----------
@@ -204,6 +235,27 @@ public class ReservationService {
                 .multiply(BigDecimal.valueOf(tauxRemisePourcent(jours)))
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         return montantBrut.subtract(remise).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** Délai minimal avant le début de la location pour une annulation gratuite. */
+    static final Duration DELAI_ANNULATION_GRATUITE = Duration.ofHours(48);
+
+    /** Pénalité appliquée en cas d'annulation tardive (en % du montant estimé). */
+    static final int TAUX_PENALITE_ANNULATION_POURCENT = 20;
+
+    /**
+     * Pénalité d'annulation :
+     * plus de 48 h avant le début (date_debut à 00:00) = gratuite ;
+     * 48 h ou moins (y compris après le début) = 20 % du montant estimé.
+     */
+    static BigDecimal calculerFraisAnnulation(LocalDate dateDebut, BigDecimal montantEstime, LocalDateTime maintenant) {
+        Duration avantDebut = Duration.between(maintenant, dateDebut.atStartOfDay());
+        if (avantDebut.compareTo(DELAI_ANNULATION_GRATUITE) > 0) {
+            return BigDecimal.ZERO.setScale(2);
+        }
+        return montantEstime
+                .multiply(BigDecimal.valueOf(TAUX_PENALITE_ANNULATION_POURCENT))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
     /** Taux de remise (en %) selon la durée de location en jours. */

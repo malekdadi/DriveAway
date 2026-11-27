@@ -1,6 +1,7 @@
 package com.driveaway.reservation.service;
 
 import com.driveaway.reservation.dto.ChiffreAffairesResponse;
+import com.driveaway.reservation.dto.ContratEnRetardResponse;
 import com.driveaway.reservation.dto.ContratRequest;
 import com.driveaway.reservation.dto.ContratResponse;
 import com.driveaway.reservation.dto.DepartRequest;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -27,10 +29,23 @@ public class ContratService {
 
     private final ContratRepository contratRepository;
     private final ReservationService reservationService;
+    private final ContratPdfGenerator pdfGenerator;
 
-    public ContratService(ContratRepository contratRepository, ReservationService reservationService) {
+    public ContratService(ContratRepository contratRepository, ReservationService reservationService,
+                          ContratPdfGenerator pdfGenerator) {
         this.contratRepository = contratRepository;
         this.reservationService = reservationService;
+        this.pdfGenerator = pdfGenerator;
+    }
+
+    /** Contrat au format PDF (numéro, dates, montants). Retourne le numéro et les octets du document. */
+    @Transactional(readOnly = true)
+    public ContratPdf genererPdf(Long id) {
+        Contrat c = trouver(id);
+        return new ContratPdf(c.getNumeroContrat(), pdfGenerator.generer(c));
+    }
+
+    public record ContratPdf(String numeroContrat, byte[] contenu) {
     }
 
     // ---------- CREATE ----------
@@ -82,6 +97,27 @@ public class ContratService {
                 ? contratRepository.findAll(pageable)
                 : contratRepository.findByStatut(statut, pageable);
         return page.map(ContratResponse::from);
+    }
+
+    /**
+     * Retards : contrats EN_COURS dont date_fin_prevue est avant aujourd'hui,
+     * c'est-à-dire des véhicules qui n'ont pas été rendus. Le plus ancien retard d'abord.
+     */
+    @Transactional(readOnly = true)
+    public List<ContratEnRetardResponse> listerEnRetard() {
+        LocalDate aujourdhui = LocalDate.now();
+        return contratRepository.findByStatutAndDateFinPrevueAvant(StatutContrat.EN_COURS, aujourdhui)
+                .stream()
+                .map(c -> {
+                    Reservation r = c.getReservation();
+                    long joursRetard = ChronoUnit.DAYS.between(c.getDateFinPrevue(), aujourdhui);
+                    return new ContratEnRetardResponse(
+                            c.getIdContrat(), c.getNumeroContrat(), r.getIdReservation(),
+                            r.getClientId(), r.getVehiculeId(), r.getAgenceRetourId(),
+                            c.getDateDebutEffective(), c.getDateFinPrevue(), joursRetard,
+                            calculerFraisRetard(joursRetard, r.getPrixJournalier()));
+                })
+                .toList();
     }
 
     /**

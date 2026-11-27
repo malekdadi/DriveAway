@@ -1,6 +1,7 @@
 package com.driveaway.reservation.controller;
 
 import com.driveaway.reservation.dto.ChiffreAffairesResponse;
+import com.driveaway.reservation.dto.ContratEnRetardResponse;
 import com.driveaway.reservation.dto.ContratRequest;
 import com.driveaway.reservation.dto.ContratResponse;
 import com.driveaway.reservation.dto.DepartRequest;
@@ -12,12 +13,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -53,9 +58,28 @@ public class ContratController {
         return service.chiffreAffaires(debut, fin);
     }
 
+    /** GET /api/reservations/contrats/en-retard : véhicules non rendus à la date prévue. */
+    @GetMapping("/contrats/en-retard")
+    public List<ContratEnRetardResponse> enRetard() {
+        return service.listerEnRetard();
+    }
+
     @GetMapping("/contrats/{id}")
     public ContratResponse consulter(@PathVariable Long id) {
         return service.consulter(id);
+    }
+
+    /** GET /api/reservations/contrats/{id}/pdf  (200 application/pdf · 404) */
+    @GetMapping("/contrats/{id}/pdf")
+    public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
+        ContratService.ContratPdf pdf = service.genererPdf(id);
+        ContentDisposition disposition = ContentDisposition.inline()
+                .filename("contrat-" + pdf.numeroContrat() + ".pdf")
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf.contenu());
     }
 
     @GetMapping("/contrats/numero/{numero}")

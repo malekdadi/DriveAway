@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface ContratRepository extends JpaRepository<Contrat, Long> {
@@ -21,6 +22,16 @@ public interface ContratRepository extends JpaRepository<Contrat, Long> {
     Optional<Contrat> findByNumeroContrat(String numeroContrat);
 
     Page<Contrat> findByStatut(StatutContrat statut, Pageable pageable);
+
+    /** Contrats dans un statut donné dont la fin prévue est avant une date (réservation chargée, plus ancien retard d'abord). */
+    @Query("""
+            SELECT c FROM Contrat c JOIN FETCH c.reservation
+            WHERE c.statut = :statut
+              AND c.dateFinPrevue < :date
+            ORDER BY c.dateFinPrevue ASC
+            """)
+    List<Contrat> findByStatutAndDateFinPrevueAvant(@Param("statut") StatutContrat statut,
+                                                    @Param("date") LocalDate date);
 
     /** Somme des montants finaux des contrats TERMINE dont le retour effectif est dans [debut, fin]. */
     @Query("""
